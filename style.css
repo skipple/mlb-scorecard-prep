@@ -120,6 +120,17 @@ dl.standings dd::before {
 .team .name-col { width: 100%; }
 .team .name-col ~ th, .team .name-col ~ td { padding-left: 4px; }
 .team th, .team td { padding-right: 0; }
+/* One dashed line under the whole header row, bridging the border-spacing gaps. */
+.team thead { position: relative; }
+.team thead th { border-bottom: none; }
+.team thead::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-bottom: 1px dashed var(--fg);
+}
 .team .name { white-space: normal; }
 
 @media screen and (max-width: 760px) {
