@@ -12,6 +12,7 @@ const app = document.getElementById('app');
 const statsNoteEl = document.getElementById('stats-note');
 const navExtraEl = document.getElementById('nav-extra');
 const homeLinkEl = document.getElementById('home-link');
+const printLinkEl = document.getElementById('print');
 let refreshTimer = null;
 let viewToken = 0;
 let usePostseasonStats = false;
@@ -71,8 +72,10 @@ function route() {
   navExtraEl.innerHTML = '';
   const token = ++viewToken;
   const hash = location.hash.slice(1);
+  const isGame = /^\d+$/.test(hash);
   homeLinkEl.hidden = hash === '';
-  const view = /^\d+$/.test(hash)
+  printLinkEl.hidden = !isGame;
+  const view = isGame
     ? showGame(hash, token)
     : showList(parseISODate(hash) ?? new Date(), token);
   view.catch(err => {
@@ -193,10 +196,7 @@ function gamesBackCell(group, tr) {
 
 function startTimeHtml(gd) {
   if (gd.status.startTimeTBD) return 'TBD';
-  const iso = gd.datetime.dateTime;
-  const park = fmtTime(iso, gd.venue.timeZone?.id);
-  const local = fmtTime(iso);
-  return park === local ? esc(park) : `${esc(park)} ballpark<br>${esc(local)} local`;
+  return esc(fmtTime(gd.datetime.dateTime, gd.venue.timeZone?.id));
 }
 
 // One table per division the two teams play in (one if they share it). Spring training groups
