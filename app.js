@@ -55,7 +55,11 @@ function fmtTime(iso, timeZone) {
 }
 
 function table(headers, rows, numCols = [], groupStart = -1) {
-  const cell = (tag, v, i) => `<${tag}${numCols.includes(i) ? ' class="num"' : ''}>${v}</${tag}>`;
+  const nameCol = headers.indexOf('Name');
+  const cell = (tag, v, i) => {
+    const cls = [numCols.includes(i) && 'num', i === nameCol && 'name-col'].filter(Boolean).join(' ');
+    return `<${tag}${cls ? ` class="${cls}"` : ''}>${v}</${tag}>`;
+  };
   const row = (r, n) => `<tr${n === groupStart ? ' class="group-start"' : ''}>${r.map((v, i) => cell('td', v, i)).join('')}</tr>`;
   return `<table><thead><tr>${headers.map((h, i) => cell('th', esc(h), i)).join('')}</tr></thead>
     <tbody>${rows.map(row).join('')}</tbody></table>`;
