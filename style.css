@@ -82,14 +82,36 @@ dl.info dd { margin: 0; }
   gap: 0 24px;
 }
 
-.standings { margin: 0 auto; }
-.standings th, .standings td { padding: 1px 6px; }
-.standings tbody th { border-bottom: none; text-align: center; }
+.division-standings { display: flex; gap: 0 24px; }
+.division-standings.single { justify-content: center; }
 
 tr.group-start td { padding-top: 0.6em; }
 
-.team-stats th:nth-child(4) { border-bottom: none; }
-.team-stats th:nth-child(4), .team-stats td:nth-child(4) { padding: 0 0 0 1em; }
+
+/* Half a monospace character (0.6em) between a stat and its rank. */
+.team-stats .rank { margin-left: 0.3em; }
+
+/* Label ..... value rows; the dots fill whatever space is left. */
+dl.leaders { margin: 0; }
+dl.leaders div { display: flex; align-items: baseline; }
+dl.leaders dt { font-weight: bold; white-space: nowrap; }
+dl.leaders dd { flex: 1; display: flex; margin: 0; white-space: nowrap; }
+/* width: 0 keeps the dots from widening the column. */
+dl.leaders dd::before {
+  content: "........................................";
+  flex: 1;
+  width: 0;
+  overflow: hidden;
+  margin: 0 0.3em;
+}
+
+.team-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+  align-items: start;
+  margin-bottom: 0.6em;
+}
 
 .team table { border-collapse: separate; border-spacing: 10px 0; margin: 0 -10px; width: calc(100% + 20px); }
 .team .name-col { width: 100%; }

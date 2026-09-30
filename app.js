@@ -165,39 +165,30 @@ function pitchingCells(stat) {
   return [`${stat.wins}-${stat.losses}`, stat.era, stat.whip];
 }
 
-function standingsPath(season, statType) {
-  return statType === 'S'
+async function fetchStandings(season, statType) {
+  const standings = await getJSON((statType === 'S'
     ? `/api/v1/standings?leagueId=114,115&season=${season}&standingsTypes=springTraining`
-    : `/api/v1/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason`;
+    : `/api/v1/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason`) +
+    '&hydrate=team,division');
+  // Spring training leaves gamesBack as "-" for every team; the real value is springLeagueGamesBack.
+  if (statType === 'S') {
+    for (const tr of (standings.records ?? []).flatMap(r => r.teamRecords)) tr.gamesBack = tr.springLeagueGamesBack;
+  }
+  return standings;
 }
 
-function findTeamRecord(standings, teamId) {
-  for (const r of standings.records ?? []) {
-    const tr = r.teamRecords.find(x => x.team.id === teamId);
-    if (tr) return tr;
-  }
-  return null;
+// The division (or spring league) record group a team is in.
+function findTeamGroup(standings, teamId) {
+  return standings.records?.find(r => r.teamRecords.some(tr => tr.team.id === teamId)) ?? null;
 }
 
 // For a division leader, show the lead over second place as "(+6)" instead of "-".
-function gamesBackCell(standings, tr) {
+function gamesBackCell(group, tr) {
   if (tr.gamesBack !== '-') return tr.gamesBack;
-  const group = standings.records?.find(r => r.teamRecords.includes(tr));
-  const lead = Math.min(...(group?.teamRecords ?? [])
+  const lead = Math.min(...group.teamRecords
     .filter(x => x !== tr)
     .map(x => parseFloat(x.gamesBack) || 0));
   return lead > 0 && Number.isFinite(lead) ? `(+${lead})` : '-';
-}
-
-function standingsRow(team, tr, standings) {
-  if (!tr) return [esc(team.abbreviation), '-', '-', '-', '-', '-'];
-  const split = type => {
-    const s = tr.records?.splitRecords?.find(x => x.type === type);
-    return s ? `${s.wins}-${s.losses}` : '-';
-  };
-  const diff = tr.runDifferential > 0 ? `+${tr.runDifferential}` : String(tr.runDifferential ?? '-');
-  const gb = gamesBackCell(standings, tr);
-  return [team.abbreviation, `${tr.wins}-${tr.losses}`, gb, split('lastTen'), diff, split('winners')].map(esc);
 }
 
 function startTimeHtml(gd) {
@@ -208,14 +199,22 @@ function startTimeHtml(gd) {
   return park === local ? esc(park) : `${esc(park)} ballpark<br>${esc(local)} local`;
 }
 
+// One table per division the two teams play in (one if they share it). Spring training groups
+// by Cactus / Grapefruit League, which the API only names on each team.
 function standingsHtml(sides, standings) {
-  const [away, home] = sides.map(s => standingsRow(s.team, findTeamRecord(standings, s.team.id), standings));
-  const labels = ['W-L', 'GB', 'L10', 'Diff', '>.500'];
-  const rows = labels.map((label, i) =>
-    `<tr><td class="num">${away[i + 1]}</td><th>${esc(label)}</th><td>${home[i + 1]}</td></tr>`).join('');
-  return `<h2>Standings</h2><table class="standings">
-    <thead><tr><th class="num">${away[0]}</th><th></th><th>${home[0]}</th></tr></thead>
-    <tbody>${rows}</tbody></table>`;
+  const playing = sides.map(s => s.team.id);
+  const groups = [...new Set(playing.map(id => findTeamGroup(standings, id)))].filter(Boolean);
+  if (!groups.length) return '<h2>Standings</h2><p>Not yet available</p>';
+  const tableFor = group => {
+    const name = group.division?.nameShort ?? group.teamRecords[0]?.team?.springLeague?.name ?? '';
+    const rows = group.teamRecords.map(tr => {
+      const b = v => playing.includes(tr.team.id) ? `<b>${esc(v)}</b>` : esc(v);
+      return [b(tr.team.abbreviation ?? tr.team.name), b(tr.gamesBack)];
+    });
+    return table([name, 'GB'], rows, [1]);
+  };
+  return `<h2>Standings</h2><div class="division-standings${groups.length === 1 ? ' single' : ''}">
+    ${groups.map(tableFor).join('')}</div>`;
 }
 
 function gameHeaderHtml(gd, sched) {
@@ -268,17 +267,74 @@ function umpiresHtml(officials) {
   return `<h2>Umpires</h2>${table(['Pos', 'Name'], rows)}`;
 }
 
-function teamStatsHtml(data) {
-  const group = name => data?.stats?.find(g => g.group?.displayName === name)?.splits?.[0]?.stat;
-  const hit = group('hitting');
-  const fld = group('fielding');
-  const offense = [hit?.avg, hit?.obp, hit?.ops].map(v => esc(v ?? '-'));
-  const defense = [fld?.fielding, fld?.doublePlays, fld?.errors].map(v => esc(v ?? '-'));
-  return `<div class="team-stats">${table(['AVG', 'OBP', 'OPS', '', 'DEF%', 'DP', 'E'],
-    [[...offense, '', ...defense]], [0, 1, 2, 4, 5, 6])}</div>`;
+// League-wide team stat queries, by name used in TEAM_STAT_GROUPS.
+const TEAM_STAT_QUERIES = {
+  hit: 'stats=season&group=hitting',
+  fld: 'stats=season&group=fielding',
+  sp: 'stats=statSplits&group=pitching&sitCodes=sp',
+  rp: 'stats=statSplits&group=pitching&sitCodes=rp',
+};
+
+// Each group shares one header row: stats are [header, API stat, rank order] and rows are [label, query].
+const TEAM_STAT_GROUPS = [
+  { stats: [['AVG', 'avg', 'desc'], ['OBP', 'obp', 'desc'], ['OPS', 'ops', 'desc']], rows: [['', 'hit']] },
+  { stats: [['DEF%', 'fielding', 'desc'], ['DP', 'doublePlays', 'desc'], ['E', 'errors', 'asc']], rows: [['', 'fld']] },
+  { stats: [['ERA', 'era', 'asc'], ['WHIP', 'whip', 'asc']], rows: [['SP', 'sp'], ['RP', 'rp']] },
+];
+
+// rankings[query][stat]: every team's splits sorted by that stat; the API numbers each team's rank
+// (ties share a rank).
+async function teamRankings(season, statType) {
+  const rankings = {};
+  await Promise.all(TEAM_STAT_GROUPS.flatMap(({ stats, rows }) => rows.flatMap(([, query]) =>
+    stats.map(([, stat, order]) =>
+      getJSON(`/api/v1/teams/stats?${TEAM_STAT_QUERIES[query]}&sortStat=${stat}&order=${order}` +
+        `&sportIds=1&season=${season}&gameType=${statType}`)
+        .then(d => d.stats?.[0]?.splits ?? [], () => [])
+        .then(splits => { (rankings[query] ??= {})[stat] = splits; })))));
+  return rankings;
 }
 
-function teamHtml(s, people, teamStats, startingPitcherIds) {
+function teamStatsHtml(teamId, rankings) {
+  const cell = (query, stat) => {
+    const split = rankings[query]?.[stat]?.find(s => s.team?.id === teamId);
+    const value = split?.stat?.[stat];
+    if (value == null) return '-';
+    return split.rank ? `${esc(value)}<i class="rank">(${esc(split.rank)})</i>` : esc(value);
+  };
+  // Stats line up on the right; the label spans the columns a shorter group leaves empty.
+  const width = Math.max(...TEAM_STAT_GROUPS.map(g => g.stats.length));
+  const rows = TEAM_STAT_GROUPS.map(({ stats, rows }) => {
+    const span = width - stats.length + 1;
+    return `<tr><td colspan="${span}"></td>${stats.map(([h]) => `<th class="num">${esc(h)}</th>`).join('')}</tr>` +
+      rows.map(([label, query]) => `<tr><td colspan="${span}" class="num"><b>${esc(label)}</b></td>` +
+        `${stats.map(([, stat]) => `<td class="num">${cell(query, stat)}</td>`).join('')}</tr>`).join('');
+  }).join('');
+  return `<table class="team-stats"><tbody>${rows}</tbody></table>`;
+}
+
+function teamStandingsHtml(team, standings) {
+  const group = findTeamGroup(standings, team.id);
+  const tr = group?.teamRecords.find(x => x.team.id === team.id);
+  const split = type => {
+    const s = tr?.records?.splitRecords?.find(x => x.type === type);
+    return s && `${s.wins}-${s.losses}`;
+  };
+  const diff = tr?.runDifferential;
+  const items = [
+    ['Wins-Loss', tr && `${tr.wins}-${tr.losses}`],
+    ['Gamesback', tr && gamesBackCell(group, tr)],
+    ['Home', split('home')],
+    ['Road', split('away')],
+    ['Last 10', split('lastTen')],
+    ['>.500', split('winners')],
+    ['Score diff', diff > 0 ? `+${diff}` : diff],
+  ];
+  return `<dl class="leaders">${items.map(([label, value]) =>
+    `<div><dt>${esc(label)}</dt><dd>${esc(value ?? '-')}</dd></div>`).join('')}</dl>`;
+}
+
+function teamHtml(s, people, rankings, standings, startingPitcherIds) {
   const person = id => people.get(id);
   const name = id => `<span class="name">${esc(person(id)?.fullName ?? `#${id}`)}</span>`;
   const bats = id => esc(person(id)?.batSide?.code ?? '');
@@ -319,7 +375,10 @@ function teamHtml(s, people, teamStats, startingPitcherIds) {
 
   return `<section class="team">
     <h2>${s.side === 'away' ? 'Away' : 'Home'}: ${esc(s.team.name)}</h2>
-    ${teamStatsHtml(teamStats)}
+    <div class="team-summary">
+      ${teamStandingsHtml(s.team, standings)}
+      ${teamStatsHtml(s.team.id, rankings)}
+    </div>
     <h3>Starting pitcher</h3>${starter}
     <h3>Lineup</h3>${lineup}
     <h3>Bench</h3>${bench}
@@ -341,18 +400,15 @@ async function showGame(pk, token) {
   const peoplePath = `/api/v1/people?personIds=${ids.join(',')}` +
     `&hydrate=stats(group=[hitting,pitching],type=season,season=${season},gameType=${statType})`;
 
-  const teamStatsFor = team => getJSON(`/api/v1/teams/${team.id}/stats?stats=season&group=hitting,fielding` +
-    `&season=${season}&gameType=${statType}`).catch(() => null);
-
   const startingPitchersFor = team => getJSON(`/api/v1/teams/${team.id}/roster/depthChart?season=${season}`)
     .then(d => new Set(d.roster.filter(r => r.position?.abbreviation === 'SP').map(r => r.person.id)))
     .catch(() => new Set());
 
-  const [peopleData, standings, sched, teamStats, startingPitcherSets] = await Promise.all([
+  const [peopleData, standings, sched, rankings, startingPitcherSets] = await Promise.all([
     ids.length ? getJSON(peoplePath) : { people: [] },
-    getJSON(standingsPath(season, statType)),
+    fetchStandings(season, statType),
     getJSON(`/api/v1/schedule?gamePk=${pk}`).then(d => d.dates?.[0]?.games?.[0]).catch(() => null),
-    Promise.all(sides.map(s => teamStatsFor(s.team))),
+    teamRankings(season, statType),
     Promise.all(sides.map(s => startingPitchersFor(s.team))),
   ]);
   if (token !== viewToken) return;
@@ -370,7 +426,7 @@ async function showGame(pk, token) {
         <div>${standingsHtml(sides, standings)}</div>
       </section>
     </div>
-    <div class="teams">${sides.map((s, i) => teamHtml(s, people, teamStats[i], startingPitcherSets[i])).join('')}</div>
+    <div class="teams">${sides.map((s, i) => teamHtml(s, people, rankings, standings, startingPitcherSets[i])).join('')}</div>
     <p class="muted no-print">Updated ${esc(new Date().toLocaleTimeString())}${isLive ? '. Refreshes every 5 minutes while the game is in progress.' : '.'}</p>`;
   statsNoteEl.textContent = `Stats: ${season} ${statsNote}. Batters with fewer than ${SMALL_SAMPLE_AB} AB show H/AB in place of AVG.`;
   const status = `<span class="status">${esc(gd.status.detailedState)}</span>`;
