@@ -13,6 +13,7 @@ const statsNoteEl = document.getElementById('stats-note');
 const navExtraEl = document.getElementById('nav-extra');
 const homeLinkEl = document.getElementById('home-link');
 const printLinkEl = document.getElementById('print');
+const themeToggleEl = document.getElementById('theme-toggle');
 let refreshTimer = null;
 let viewToken = 0;
 let usePostseasonStats = false;
@@ -65,6 +66,20 @@ function table(headers, rows, numCols = [], groupStart = -1) {
   return `<table><thead><tr>${headers.map((h, i) => cell('th', esc(h), i)).join('')}</tr></thead>
     <tbody>${rows.map(row).join('')}</tbody></table>`;
 }
+
+function syncThemeToggle() {
+  themeToggleEl.textContent = document.documentElement.dataset.theme === 'dark' ? 'Light mode' : 'Dark mode';
+}
+
+themeToggleEl.addEventListener('click', e => {
+  e.preventDefault();
+  const root = document.documentElement;
+  if (root.dataset.theme === 'dark') delete root.dataset.theme;
+  else root.dataset.theme = 'dark';
+  try { localStorage.setItem('theme', root.dataset.theme ?? 'light'); } catch (err) {}
+  syncThemeToggle();
+});
+syncThemeToggle();
 
 function route() {
   clearTimeout(refreshTimer);

@@ -1,5 +1,8 @@
 * { box-sizing: border-box; }
 
+:root { --bg: #fff; --fg: #000; --muted: #555; }
+:root[data-theme="dark"] { --bg: #000; --fg: #fff; --muted: #aaa; color-scheme: dark; }
+
 body {
   margin: 0 auto;
   padding: 16px;
@@ -7,8 +10,8 @@ body {
   font-family: "Geist Mono", "Consolas", "Menlo", monospace;
   font-size: 12px;
   line-height: 1.35;
-  background: #fff;
-  color: #000;
+  background: var(--bg);
+  color: var(--fg);
 }
 
 a { color: inherit; }
@@ -35,7 +38,7 @@ h1, h2, h3 {
 h1 { font-size: 1.3em; margin-top: 0; }
 
 h2 {
-  border-bottom: 1px solid #000;
+  border-bottom: 1px solid var(--fg);
   padding-bottom: 2px;
   font-size: 1.1em;
 }
@@ -49,11 +52,11 @@ th, td {
   vertical-align: top;
 }
 
-th { border-bottom: 1px dashed #000; font-weight: bold; }
+th { border-bottom: 1px dashed var(--fg); font-weight: bold; }
 
 td.num, th.num { text-align: right; }
 
-.muted { color: #555; }
+.muted { color: var(--muted); }
 
 .status { font-weight: bold; }
 
@@ -92,7 +95,7 @@ tr.group-start td { padding-top: 0.6em; }
 .team-stats .rank { margin-left: 0.3em; }
 
 /* Label ..... value rows; the dots fill whatever space is left. */
-dl.standings { margin: 0.4em 0 0 0.3em; border: 1px dashed #000; padding: 0.2em 0.4em; }
+dl.standings { margin: 0.4em 0 0 0.3em; border: 1px dashed var(--fg); padding: 0.2em 0.4em; }
 dl.standings div { display: flex; align-items: baseline; }
 dl.standings dt { font-weight: bold; white-space: nowrap; }
 dl.standings dd { flex: 1; display: flex; margin: 0; white-space: nowrap; }
@@ -157,12 +160,13 @@ select {
 .game-title h1 { margin: 0; }
 .game-meta { margin-left: auto; text-align: right; }
 
-footer { margin-top: 24px; font-size: 0.8em; color: #555; }
+footer { margin-top: 24px; font-size: 0.8em; color: var(--muted); }
 footer p { margin: 0 0 4px; }
 footer p:empty { display: none; }
 .footer-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 16px; }
 
 @media print {
+  :root, :root[data-theme="dark"] { --bg: #fff; --fg: #000; --muted: #555; color-scheme: light; }
   .no-print { display: none; }
   body { padding: 0; max-width: none; font-size: 8pt; line-height: 1.2; }
   th, td { padding-right: 8px; white-space: normal; }

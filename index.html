@@ -8,12 +8,16 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;700&display=swap">
   <link rel="stylesheet" href="style.css">
+  <script>
+    try { if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+  </script>
 </head>
 <body>
   <nav class="no-print">
     <a href="#" id="home-link">Today's games</a>
     <div class="nav-controls">
       <span id="nav-extra"></span>
+      <a href="#" id="theme-toggle">Dark mode</a>
       <a href="#" id="print" onclick="window.print(); return false;">Print</a>
     </div>
   </nav>
