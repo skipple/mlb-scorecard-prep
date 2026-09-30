@@ -92,7 +92,7 @@ tr.group-start td { padding-top: 0.6em; }
 .team-stats .rank { margin-left: 0.3em; }
 
 /* Label ..... value rows; the dots fill whatever space is left. */
-dl.standings { margin: 0; }
+dl.standings { margin: 0.4em 0 0 0.3em; border: 1px dashed #000; padding: 0.2em 0.4em; }
 dl.standings div { display: flex; align-items: baseline; }
 dl.standings dt { font-weight: bold; white-space: nowrap; }
 dl.standings dd { flex: 1; display: flex; margin: 0; white-space: nowrap; }
