@@ -242,7 +242,7 @@ function gameHeaderHtml(gd, sched) {
 }
 
 function statToggleHtml(statType) {
-  return `<label>Stats <select id="stat-type">
+  return `<label>Stats:<select id="stat-type">
       <option value="R"${statType === 'R' ? ' selected' : ''}>Regular season</option>
       <option value="P"${statType === 'P' ? ' selected' : ''}>Postseason</option>
     </select></label>`;
