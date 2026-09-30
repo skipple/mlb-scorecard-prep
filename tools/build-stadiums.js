@@ -213,10 +213,10 @@ function pathPoints(d) {
 function compassRose(deg) {
   const [cx, cy] = [224, 200];
   const rad = deg * Math.PI / 180;
-  const nx = (cx + Math.sin(rad) * 23).toFixed(1), ny = (cy - Math.cos(rad) * 23).toFixed(1);
+  const nx = (cx + Math.sin(rad) * 25).toFixed(1), ny = (cy - Math.cos(rad) * 25).toFixed(1);
   const ticks = [90, 180, 270].map(k => `<path class="tick" d="M0-8V-14" transform="rotate(${k})"/>`).join('');
   return `<g class="compass"><g transform="translate(${cx} ${cy}) rotate(${deg.toFixed(1)})">`
-    + `<circle r="11"/>${ticks}<path class="arrow" d="M0-16.5 4.5-8H-4.5Z"/></g>`
+    + `<circle r="11"/>${ticks}<path class="arrow" d="M0-18.5 4.5-10H-4.5Z"/></g>`
     + `<text x="${nx}" y="${ny}">N</text></g>`;
 }
 

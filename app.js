@@ -7,6 +7,9 @@ const UMP_ABBR = {
 };
 
 const POSTSEASON_TYPES = ['F', 'D', 'L', 'W'];
+// Coaching staff shown, in display order. Matched by job name because each interim role has its own
+// job id (e.g. NTRM for Interim Manager).
+const CORE_COACH_JOBS = ['Manager', 'Bench Coach', 'Hitting Coach', 'Pitching Coach'];
 
 const app = document.getElementById('app');
 const statsNoteEl = document.getElementById('stats-note');
@@ -367,7 +370,7 @@ function teamStandingsHtml(team, standings) {
     `<div><dt>${esc(label)}</dt><dd>${esc(value ?? '-')}</dd></div>`).join('')}</dl>`;
 }
 
-function teamHtml(s, people, rankings, standings, startingPitcherIds) {
+function teamHtml(s, people, rankings, standings, startingPitcherIds, coaches) {
   const person = id => people.get(id);
   const name = id => `<span class="name">${esc(person(id)?.fullName ?? `#${id}`)}</span>`;
   const bats = id => esc(person(id)?.batSide?.code ?? '');
@@ -408,6 +411,13 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds) {
       [...pitcherNum, 7, 8], relievers.length || -1)
     : '<p>Not yet available</p>';
 
+  // Two columns of "Role ..... # Last name"; "Interim Bench Coach" shows as "Int Bench".
+  const role = job => job.replace(/^Interim /, 'Int ').replace(/ Coach$/, '');
+  const staff = coaches.length
+    ? `<dl class="standings coaches">${coaches.map(c =>
+      `<div><dt>${esc(role(c.job))}</dt><dd>${esc([c.jerseyNumber, c.person.useLastName ?? c.person.lastName ?? c.person.fullName].filter(Boolean).join(' '))}</dd></div>`).join('')}</dl>`
+    : '<p>Not yet available</p>';
+
   return `<section class="team">
     <h2>${s.side === 'away' ? 'Away' : 'Home'}: ${esc(s.team.name)}</h2>
     <div class="team-summary">
@@ -418,6 +428,7 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds) {
     <h3>Lineup</h3>${lineup}
     <h3>Bench</h3>${bench}
     <h3>Bullpen</h3>${bullpen}
+    <h3>Coaches</h3>${staff}
   </section>`;
 }
 
@@ -439,12 +450,18 @@ async function showGame(pk, token) {
     .then(d => new Set(d.roster.filter(r => r.position?.abbreviation === 'SP').map(r => r.person.id)))
     .catch(() => new Set());
 
-  const [peopleData, standings, sched, rankings, startingPitcherSets, stadiums] = await Promise.all([
+  // Staff as of the game date, so past games show who was coaching then.
+  const coachesFor = team => getJSON(`/api/v1/teams/${team.id}/coaches?date=${gd.datetime.officialDate}&hydrate=person`)
+    .then(d => CORE_COACH_JOBS.flatMap(job => (d.roster ?? []).filter(c => c.job?.replace(/^Interim /, '') === job)))
+    .catch(() => []);
+
+  const [peopleData, standings, sched, rankings, startingPitcherSets, coachSets, stadiums] = await Promise.all([
     ids.length ? getJSON(peoplePath) : { people: [] },
     fetchStandings(season, statType),
     getJSON(`/api/v1/schedule?gamePk=${pk}`).then(d => d.dates?.[0]?.games?.[0]).catch(() => null),
     teamRankings(season, statType),
     Promise.all(sides.map(s => startingPitchersFor(s.team))),
+    Promise.all(sides.map(s => coachesFor(s.team))),
     loadStadiums(),
   ]);
   if (token !== viewToken) return;
@@ -462,7 +479,7 @@ async function showGame(pk, token) {
         <div>${standingsHtml(sides, standings)}</div>
       </section>
     </div>
-    <div class="teams">${sides.map((s, i) => teamHtml(s, people, rankings, standings, startingPitcherSets[i])).join('')}</div>
+    <div class="teams">${sides.map((s, i) => teamHtml(s, people, rankings, standings, startingPitcherSets[i], coachSets[i])).join('')}</div>
     <p class="muted no-print">Updated ${esc(new Date().toLocaleTimeString())}${isLive ? '. Refreshes every 5 minutes while the game is in progress.' : '.'}</p>`;
   statsNoteEl.textContent = `Stats: ${season} ${statsNote}. Batters with fewer than ${SMALL_SAMPLE_AB} AB show H/AB in place of AVG.`;
   const status = `<span class="status">${esc(gd.status.detailedState)}</span>`;
