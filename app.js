@@ -290,7 +290,8 @@ function gameInfoHtml(gd, live, parkSvg) {
     ['Duration', esc(durationText || '-')],
   ];
 
-  const dl = `<dl class="info">${items.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+  // Keep wind on one line ("8 mph, In From CF"); the park diagram shrinks to make room.
+  const dl = `<dl class="info">${items.map(([k, v]) => `<dt>${k}</dt><dd${k === 'Wind' ? ' class="nowrap"' : ''}>${v}</dd>`).join('')}</dl>`;
   const park = parkSvg
     ? `<svg class="park" viewBox="0 10 250 225" role="img" aria-label="${esc(gd.venue.name)} field outline">${parkSvg}</svg>`
     : '';

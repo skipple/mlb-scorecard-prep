@@ -72,6 +72,7 @@ dl.info {
 
 dl.info dt { font-weight: bold; }
 dl.info dd { margin: 0; }
+dl.info dd.nowrap { white-space: nowrap; }
 
 .game-info { display: flex; justify-content: space-between; gap: 12px; }
 /* Auto margins center the park in the space beside the info list. */
