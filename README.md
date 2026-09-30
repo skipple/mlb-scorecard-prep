@@ -8,7 +8,8 @@ For each game it shows:
 
 - Starting lineups and pitchers, plus bench and bullpen, with season stats and jersey numbers
 - Team offense/defense stats and standings
-- Umpires, stadium, weather, wind and start time
+- Umpires, stadium, location, weather, wind and start time
+- An outline of the ballpark with its fence distances and which way it faces
 - In-game details (actual start, attendance, end time, duration) as they become available
 
-Data comes from the [MLB Stats API](https://statsapi.mlb.com).
+Data comes from the [MLB Stats API](https://statsapi.mlb.com). Ballpark outlines come from [Baseball Savant](https://baseballsavant.mlb.com).

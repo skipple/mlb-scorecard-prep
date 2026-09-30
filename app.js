@@ -183,6 +183,13 @@ function pitchingCells(stat) {
   return [`${stat.wins}-${stat.losses}`, stat.era, stat.whip];
 }
 
+// Park outlines by venue id, built from Baseball Savant by tools/build-stadiums.js. Loaded once.
+let stadiumsPromise = null;
+function loadStadiums() {
+  stadiumsPromise ??= fetch('stadiums.json').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+  return stadiumsPromise;
+}
+
 async function fetchStandings(season, statType) {
   const standings = await getJSON((statType === 'S'
     ? `/api/v1/standings?leagueId=114,115&season=${season}&standingsTypes=springTraining`
@@ -248,7 +255,7 @@ function statToggleHtml(statType) {
     </select></label>`;
 }
 
-function gameInfoHtml(gd, live) {
+function gameInfoHtml(gd, live, parkSvg) {
   const plays = live.plays?.allPlays ?? [];
   const started = plays.some(p => p.playEvents?.some(e => e.isPitch));
   const final = gd.status.abstractGameState === 'Final';
@@ -258,22 +265,33 @@ function gameInfoHtml(gd, live) {
   const weather = [condition, w.temp && `${w.temp}°`].filter(Boolean).join(' ');
   const endTime = final && started && plays.at(-1).about?.endTime;
   const duration = final ? info('T') : null;
+  const durationText = [duration, endTime && `(${fmtTime(endTime, gd.venue.timeZone?.id)})`].filter(Boolean).join(' ');
+  // International venues (e.g. Mexico City) have no state, so fall back to the country.
+  const loc = gd.venue.location ?? {};
+  const cityState = [loc.city, loc.stateAbbrev ?? loc.country].filter(Boolean).join(', ');
+  // Standing-room crowds can top 100% of capacity; show that as-is.
+  const att = gd.gameInfo?.attendance;
+  const capacity = gd.venue.fieldInfo?.capacity;
+  const attendance = att
+    ? `${att.toLocaleString()}${capacity ? ` (${Math.round(att / capacity * 100)}%)` : ''}`
+    : '-';
 
-  const place = [
+  const items = [
     ['Stadium', esc(gd.venue.name)],
-    ['Attendance', gd.gameInfo?.attendance ? esc(gd.gameInfo.attendance.toLocaleString()) : '-'],
+    ['Location', esc(cityState || '-')],
+    ['Attendance', esc(attendance)],
     ['Weather', esc(weather || 'Not yet available')],
     ['Wind', esc(w.wind || 'Not yet available')],
-  ];
-  const times = [
     ['Start', startTimeHtml(gd)],
     ['First pitch', started && gd.gameInfo?.firstPitch ? esc(fmtTime(gd.gameInfo.firstPitch, gd.venue.timeZone?.id)) : '-'],
-    ['End time', endTime ? esc(fmtTime(endTime, gd.venue.timeZone?.id)) : '-'],
-    ['Duration', esc(duration || '-')],
+    ['Duration', esc(durationText || '-')],
   ];
-  const dl = items => `<dl class="info">${items.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
 
-  return `<h2>Game</h2><div class="split">${dl(place)}${dl(times)}</div>`;
+  const dl = `<dl class="info">${items.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+  const park = parkSvg
+    ? `<svg class="park" viewBox="0 10 250 225" role="img" aria-label="${esc(gd.venue.name)} field outline">${parkSvg}</svg>`
+    : '';
+  return `<h2>Game</h2><div class="game-info">${dl}${park}</div>`;
 }
 
 function umpiresHtml(officials) {
@@ -419,12 +437,13 @@ async function showGame(pk, token) {
     .then(d => new Set(d.roster.filter(r => r.position?.abbreviation === 'SP').map(r => r.person.id)))
     .catch(() => new Set());
 
-  const [peopleData, standings, sched, rankings, startingPitcherSets] = await Promise.all([
+  const [peopleData, standings, sched, rankings, startingPitcherSets, stadiums] = await Promise.all([
     ids.length ? getJSON(peoplePath) : { people: [] },
     fetchStandings(season, statType),
     getJSON(`/api/v1/schedule?gamePk=${pk}`).then(d => d.dates?.[0]?.games?.[0]).catch(() => null),
     teamRankings(season, statType),
     Promise.all(sides.map(s => startingPitchersFor(s.team))),
+    loadStadiums(),
   ]);
   if (token !== viewToken) return;
 
@@ -435,7 +454,7 @@ async function showGame(pk, token) {
   app.innerHTML = `
     ${gameHeaderHtml(gd, sched)}
     <div class="summary">
-      <section>${gameInfoHtml(gd, live)}</section>
+      <section>${gameInfoHtml(gd, live, stadiums[gd.venue.id])}</section>
       <section class="split">
         <div>${umpiresHtml(live.boxscore.officials)}</div>
         <div>${standingsHtml(sides, standings)}</div>

@@ -73,6 +73,18 @@ dl.info {
 dl.info dt { font-weight: bold; }
 dl.info dd { margin: 0; }
 
+.game-info { display: flex; justify-content: space-between; gap: 12px; }
+/* Auto margins center the park in the space beside the info list. */
+.park { flex: 0 1 160px; min-width: 0; margin: 0 auto; overflow: visible; }
+.park * { vector-effect: non-scaling-stroke; }
+.park .wall, .park .grass, .park .dirt, .park .line { fill: none; stroke: var(--fg); stroke-width: 1; }
+.park .grass { stroke: var(--muted); stroke-dasharray: 2 2; }
+.park .base { fill: var(--fg); }
+.park text { fill: var(--muted); font-family: inherit; font-size: 17px; text-anchor: middle; dominant-baseline: central; }
+.park .compass circle, .park .compass .tick { fill: none; stroke: var(--fg); stroke-width: 1; }
+.park .compass .arrow { fill: var(--fg); }
+.park .compass text { fill: var(--fg); font-size: 14px; font-weight: bold; }
+
 .summary, .teams {
   display: grid;
   grid-template-columns: 1fr 1fr;
