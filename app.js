@@ -330,7 +330,7 @@ function teamStandingsHtml(team, standings) {
     ['>.500', split('winners')],
     ['Score diff', diff > 0 ? `+${diff}` : diff],
   ];
-  return `<dl class="leaders">${items.map(([label, value]) =>
+  return `<dl class="standings">${items.map(([label, value]) =>
     `<div><dt>${esc(label)}</dt><dd>${esc(value ?? '-')}</dd></div>`).join('')}</dl>`;
 }
 

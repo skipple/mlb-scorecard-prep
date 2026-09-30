@@ -92,12 +92,12 @@ tr.group-start td { padding-top: 0.6em; }
 .team-stats .rank { margin-left: 0.3em; }
 
 /* Label ..... value rows; the dots fill whatever space is left. */
-dl.leaders { margin: 0; }
-dl.leaders div { display: flex; align-items: baseline; }
-dl.leaders dt { font-weight: bold; white-space: nowrap; }
-dl.leaders dd { flex: 1; display: flex; margin: 0; white-space: nowrap; }
+dl.standings { margin: 0; }
+dl.standings div { display: flex; align-items: baseline; }
+dl.standings dt { font-weight: bold; white-space: nowrap; }
+dl.standings dd { flex: 1; display: flex; margin: 0; white-space: nowrap; }
 /* width: 0 keeps the dots from widening the column. */
-dl.leaders dd::before {
+dl.standings dd::before {
   content: "........................................";
   flex: 1;
   width: 0;
