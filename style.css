@@ -126,7 +126,14 @@ dl.standings dd::before {
 .error { color: #b00; }
 
 .nav-controls { display: flex; align-items: center; gap: 12px; margin-left: auto; }
-select { font: inherit; }
+select {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
 
 .date-nav {
   display: grid;
