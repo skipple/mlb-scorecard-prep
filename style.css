@@ -100,7 +100,7 @@ tr.group-start td { padding-top: 0.6em; }
 
 .error { color: #b00; }
 
-.nav-controls { display: flex; align-items: center; gap: 12px; }
+.nav-controls { display: flex; align-items: center; gap: 12px; margin-left: auto; }
 select { font: inherit; }
 
 .date-nav {

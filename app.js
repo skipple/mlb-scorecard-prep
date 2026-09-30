@@ -11,6 +11,7 @@ const POSTSEASON_TYPES = ['F', 'D', 'L', 'W'];
 const app = document.getElementById('app');
 const statsNoteEl = document.getElementById('stats-note');
 const navExtraEl = document.getElementById('nav-extra');
+const homeLinkEl = document.getElementById('home-link');
 let refreshTimer = null;
 let viewToken = 0;
 let usePostseasonStats = false;
@@ -66,6 +67,7 @@ function route() {
   navExtraEl.innerHTML = '';
   const token = ++viewToken;
   const hash = location.hash.slice(1);
+  homeLinkEl.hidden = hash === '';
   const view = /^\d+$/.test(hash)
     ? showGame(hash, token)
     : showList(parseISODate(hash) ?? new Date(), token);
