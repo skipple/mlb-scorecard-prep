@@ -234,7 +234,7 @@ function gameInfoHtml(gd, live) {
   const final = gd.status.abstractGameState === 'Final';
   const info = label => live.boxscore.info?.find(i => i.label === label)?.value?.replace(/\.$/, '');
   const w = gd.weather ?? {};
-  const weather = [w.condition, w.temp].filter(Boolean).join(' ');
+  const weather = [w.condition, w.temp && `${w.temp}°`].filter(Boolean).join(' ');
   const endTime = final && started && plays.at(-1).about?.endTime;
   const duration = final ? info('T') : null;
   const durationText = [duration, endTime && `(${fmtTime(endTime, gd.venue.timeZone?.id)})`].filter(Boolean).join(' ');
