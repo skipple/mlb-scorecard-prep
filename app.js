@@ -377,6 +377,8 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds) {
   const pitch = id => pitchingCells(seasonStat(person(id), 'pitching')).map(esc);
   const hitStat = (id, key) => esc(seasonStat(person(id), 'hitting')?.[key] ?? '-');
   const pitStat = (id, key) => esc(seasonStat(person(id), 'pitching')?.[key] ?? '-');
+  const sortKey = id => [person(id)?.lastName, person(id)?.firstName].filter(Boolean).join(' ') || person(id)?.fullName || '';
+  const byLastName = ids => [...ids].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
   const pitcherHeaders = ['#', 'Name', 'T', 'IP', 'W-L', 'ERA', 'WHIP'];
   const pitcherNum = [0, 3, 4, 5, 6];
@@ -394,12 +396,12 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds) {
 
   const bench = s.bench.length
     ? table(['#', 'Name', 'Pos', 'B', 'AB', 'AVG', 'OBP', 'OPS'],
-      s.bench.map(id => [num(id), name(id), esc(person(id)?.primaryPosition?.abbreviation ?? ''), bats(id), hitStat(id, 'atBats'), ...bat(id)]),
+      byLastName(s.bench).map(id => [num(id), name(id), esc(person(id)?.primaryPosition?.abbreviation ?? ''), bats(id), hitStat(id, 'atBats'), ...bat(id)]),
       [0, 4, 5, 6, 7])
     : '<p>Not yet available</p>';
 
-  const relievers = s.bullpen.filter(id => !startingPitcherIds.has(id));
-  const bullpenOrder = [...relievers, ...s.bullpen.filter(id => startingPitcherIds.has(id))];
+  const relievers = byLastName(s.bullpen.filter(id => !startingPitcherIds.has(id)));
+  const bullpenOrder = [...relievers, ...byLastName(s.bullpen.filter(id => startingPitcherIds.has(id)))];
   const bullpen = s.bullpen.length
     ? table([...pitcherHeaders, 'SV', 'HLD'],
       bullpenOrder.map(id => [...pitcherRow(id), pitStat(id, 'saves'), pitStat(id, 'holds')]),
