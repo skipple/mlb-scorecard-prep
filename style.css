@@ -70,13 +70,19 @@ dl.info {
 dl.info dt { font-weight: bold; }
 dl.info dd { margin: 0; }
 
-.summary {
+.summary, .teams {
   display: grid;
-  grid-template-columns: repeat(3, auto);
-  justify-content: start;
-  gap: 0 48px;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 34px;
 }
 
+.split {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0 24px;
+}
+
+.standings { margin: 0 auto; }
 .standings th, .standings td { padding: 1px 6px; }
 .standings tbody th { border-bottom: none; text-align: center; }
 
@@ -84,12 +90,6 @@ tr.group-start td { padding-top: 0.6em; }
 
 .team-stats th:nth-child(4) { border-bottom: none; }
 .team-stats th:nth-child(4), .team-stats td:nth-child(4) { padding: 0 0 0 1em; }
-
-.teams {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 34px;
-}
 
 .team table { border-collapse: separate; border-spacing: 10px 0; margin: 0 -10px; width: calc(100% + 20px); }
 .team .name-col { width: 100%; }
@@ -137,8 +137,7 @@ footer p:empty { display: none; }
   .no-print { display: none; }
   body { padding: 0; max-width: none; font-size: 8pt; line-height: 1.2; }
   th, td { padding-right: 8px; white-space: normal; }
-  .summary { gap: 0 20px; }
-  .teams { gap: 0 26px; }
+  .summary, .teams { gap: 0 26px; }
   .team table { border-spacing: 7px 0; margin: 0 -7px; width: calc(100% + 14px); }
   .team .name-col ~ th, .team .name-col ~ td { padding-left: 3px; white-space: nowrap; }
   h2, h3 { margin: 0.8em 0 0.2em; }

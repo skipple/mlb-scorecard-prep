@@ -240,24 +240,26 @@ function gameInfoHtml(gd, live) {
   const final = gd.status.abstractGameState === 'Final';
   const info = label => live.boxscore.info?.find(i => i.label === label)?.value?.replace(/\.$/, '');
   const w = gd.weather ?? {};
-  const weather = [w.condition, w.temp && `${w.temp}°`].filter(Boolean).join(' ');
+  const condition = w.condition === 'Partly Cloudy' ? 'P. Cloudy' : w.condition;
+  const weather = [condition, w.temp && `${w.temp}°`].filter(Boolean).join(' ');
   const endTime = final && started && plays.at(-1).about?.endTime;
   const duration = final ? info('T') : null;
-  const durationText = [duration, endTime && `(${fmtTime(endTime, gd.venue.timeZone?.id)})`].filter(Boolean).join(' ');
 
-  const items = [
-    ['Status', `<span class="status">${esc(gd.status.detailedState)}</span>`],
+  const place = [
     ['Stadium', esc(gd.venue.name)],
-    ['Start', startTimeHtml(gd)],
+    ['Attendance', gd.gameInfo?.attendance ? esc(gd.gameInfo.attendance.toLocaleString()) : '-'],
     ['Weather', esc(weather || 'Not yet available')],
     ['Wind', esc(w.wind || 'Not yet available')],
-    ['First pitch', started && gd.gameInfo?.firstPitch ? esc(fmtTime(gd.gameInfo.firstPitch, gd.venue.timeZone?.id)) : '-'],
-    ['Attendance', gd.gameInfo?.attendance ? esc(gd.gameInfo.attendance.toLocaleString()) : '-'],
-    ['Duration', esc(durationText || '-')],
   ];
+  const times = [
+    ['Start', startTimeHtml(gd)],
+    ['First pitch', started && gd.gameInfo?.firstPitch ? esc(fmtTime(gd.gameInfo.firstPitch, gd.venue.timeZone?.id)) : '-'],
+    ['End time', endTime ? esc(fmtTime(endTime, gd.venue.timeZone?.id)) : '-'],
+    ['Duration', esc(duration || '-')],
+  ];
+  const dl = items => `<dl class="info">${items.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
 
-  return `<h2>Game</h2>
-    <dl class="info">${items.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+  return `<h2>Game</h2><div class="split">${dl(place)}${dl(times)}</div>`;
 }
 
 function umpiresHtml(officials) {
@@ -363,14 +365,17 @@ async function showGame(pk, token) {
     ${gameHeaderHtml(gd, sched)}
     <div class="summary">
       <section>${gameInfoHtml(gd, live)}</section>
-      <section>${umpiresHtml(live.boxscore.officials)}</section>
-      <section>${standingsHtml(sides, standings)}</section>
+      <section class="split">
+        <div>${umpiresHtml(live.boxscore.officials)}</div>
+        <div>${standingsHtml(sides, standings)}</div>
+      </section>
     </div>
     <div class="teams">${sides.map((s, i) => teamHtml(s, people, teamStats[i], startingPitcherSets[i])).join('')}</div>
     <p class="muted no-print">Updated ${esc(new Date().toLocaleTimeString())}${isLive ? '. Refreshes every 5 minutes while the game is in progress.' : '.'}</p>`;
   statsNoteEl.textContent = `Stats: ${season} ${statsNote}. Batters with fewer than ${SMALL_SAMPLE_AB} AB show H/AB in place of AVG.`;
+  const status = `<span class="status">${esc(gd.status.detailedState)}</span>`;
+  navExtraEl.innerHTML = isPostseason ? `${status} · ${statToggleHtml(statType)}` : status;
   if (isPostseason) {
-    navExtraEl.innerHTML = statToggleHtml(statType);
     navExtraEl.querySelector('select').addEventListener('change', e => {
       usePostseasonStats = e.target.value === 'P';
       route();
