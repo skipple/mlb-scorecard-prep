@@ -298,7 +298,7 @@ function gameInfoHtml(gd, live, sched, parkSvg) {
     ['Date', esc(date)],
     ['Stadium', esc(gd.venue.name)],
     ['Location', esc(cityState || '-')],
-    ['Attendance', esc(attendance)],
+    ['Attend.', esc(attendance)],
     ['Weather', esc(weather || 'Not yet available')],
     ['Wind', esc(w.wind || 'Not yet available')],
     ['Start', startTimeHtml(gd)],
