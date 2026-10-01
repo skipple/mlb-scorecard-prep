@@ -87,8 +87,11 @@ dl.info dd.nowrap { white-space: nowrap; }
 .summary > .split h2 { margin-top: 0.32em; }
 
 .game-info { display: flex; justify-content: space-between; gap: 12px; }
+/* Series and park share the space beside the info list. */
+.game-side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.series { text-align: right; margin-bottom: 6px; }
 /* Auto margins center the park in the space beside the info list. */
-.park { flex: 0 1 160px; min-width: 0; margin: 0.25em auto 0; overflow: visible; }
+.park { width: 100%; max-width: 160px; margin: 0.25em auto 0; overflow: visible; }
 .park * { vector-effect: non-scaling-stroke; }
 .park .wall, .park .grass, .park .dirt, .park .line { fill: none; stroke: var(--fg); stroke-width: 1; }
 .park .grass { stroke: var(--muted); stroke-dasharray: 2 2; }

@@ -284,7 +284,6 @@ function gameInfoHtml(gd, live, sched, parkSvg) {
   const weather = [condition, w.temp && `${w.temp}°`].filter(Boolean).join(' ');
   const endTime = final && started && plays.at(-1).about?.endTime;
   const duration = final ? info('T') : null;
-  const durationText = [duration, endTime && `(${fmtTime(endTime, gd.venue.timeZone?.id)})`].filter(Boolean).join(' ');
   // International venues (e.g. Mexico City) have no state, so fall back to the country.
   const loc = gd.venue.location ?? {};
   const cityState = [loc.city, loc.stateAbbrev ?? loc.country].filter(Boolean).join(', ');
@@ -297,7 +296,6 @@ function gameInfoHtml(gd, live, sched, parkSvg) {
 
   const items = [
     ['Date', esc(date)],
-    ...(series ? [['Series', esc(series)]] : []),
     ['Stadium', esc(gd.venue.name)],
     ['Location', esc(cityState || '-')],
     ['Attendance', esc(attendance)],
@@ -305,7 +303,11 @@ function gameInfoHtml(gd, live, sched, parkSvg) {
     ['Wind', esc(w.wind || 'Not yet available')],
     ['Start', startTimeHtml(gd)],
     ['First pitch', started && gd.gameInfo?.firstPitch ? esc(fmtTime(gd.gameInfo.firstPitch, gd.venue.timeZone?.id)) : '-'],
-    ['Duration', esc(durationText || '-')],
+    // End time and duration only mean something once the game is over.
+    ...(final ? [
+      ['End time', endTime ? esc(fmtTime(endTime, gd.venue.timeZone?.id)) : '-'],
+      ['Duration', esc(duration || '-')],
+    ] : []),
   ];
 
   // Keep wind on one line ("8 mph, In From CF"); the park diagram shrinks to make room.
@@ -313,7 +315,7 @@ function gameInfoHtml(gd, live, sched, parkSvg) {
   const park = parkSvg
     ? `<svg class="park" viewBox="0 10 250 225" role="img" aria-label="${esc(gd.venue.name)} field outline">${parkSvg}</svg>`
     : '';
-  return `<h1>${esc(`${gd.teams.away.name} @ ${gd.teams.home.name}`)}</h1><div class="game-info">${dl}${park}</div>`;
+  return `<h1>${esc(`${gd.teams.away.name} @ ${gd.teams.home.name}`)}</h1><div class="game-info">${dl}<div class="game-side">${series ? `<div class="muted series">${esc(series)}</div>` : ''}${park}</div></div>`;
 }
 
 function umpiresHtml(officials) {
