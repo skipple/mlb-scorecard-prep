@@ -38,7 +38,7 @@ h1, h2, h3 {
   text-transform: uppercase;
 }
 
-h1 { font-size: 1.3em; margin-top: 0; }
+h1 { font-size: 1.35em; margin-top: 0; }
 
 h2 {
   border-bottom: 1px solid var(--fg);
@@ -81,6 +81,11 @@ dl.info dt { font-weight: bold; }
 dl.info dd { margin: 0; }
 dl.info dd.nowrap { white-space: nowrap; }
 
+/* The game title heads the info section, underlined like the h2s beside it. */
+.summary h1 { margin-bottom: 0.3em; padding-bottom: 2px; border-bottom: 1px solid var(--fg); }
+/* Small top margin makes up for the h1's larger font so the underlines line up. */
+.summary > .split h2 { margin-top: 0.32em; }
+
 .game-info { display: flex; justify-content: space-between; gap: 12px; }
 /* Auto margins center the park in the space beside the info list. */
 .park { flex: 0 1 160px; min-width: 0; margin: 0.25em auto 0; overflow: visible; }
@@ -96,7 +101,7 @@ dl.info dd.nowrap { white-space: nowrap; }
 .summary, .teams {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0 34px;
+  gap: 0 18px;
 }
 
 .split {
@@ -170,6 +175,7 @@ dl.coaches dd { white-space: normal; text-align: right; }
 
 @media screen and (max-width: 760px) {
   .summary, .teams { grid-template-columns: 1fr; }
+  .summary > .split h2 { margin-top: 1.2em; }
   /* 6px between player columns: 4px spacing + 2px padding. */
   .team table { border-spacing: 4px 0; margin: 0 -4px; width: calc(100% + 8px); }
   .team .name-col ~ th, .team .name-col ~ td { padding-left: 2px; }
@@ -211,17 +217,6 @@ select {
 
 .date-nav h1 { margin: 0; text-align: center; }
 .date-nav .next { text-align: right; }
-
-.game-title {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0 16px;
-}
-
-.game-title h1 { margin: 0; }
-.game-meta { margin-left: auto; text-align: right; }
 
 footer { margin-top: 24px; font-size: 0.8em; color: var(--muted); }
 footer p { margin: 0 0 4px; }

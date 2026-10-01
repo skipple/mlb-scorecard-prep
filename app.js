@@ -261,15 +261,6 @@ function standingsHtml(sides, standings) {
     ${groups.map(tableFor).join('')}</div>`;
 }
 
-function gameHeaderHtml(gd, sched) {
-  const series = sched && sched.gameType !== 'R' && sched.seriesDescription
-    ? `${sched.seriesDescription}${sched.seriesGameNumber ? `, Game ${sched.seriesGameNumber}` : ''}`
-    : '';
-  const title = `${gd.teams.away.name} @ ${gd.teams.home.name}`;
-  const meta = `${gd.datetime.officialDate}${series ? ` · ${series}` : ''}`;
-  return `<header class="game-title"><h1>${esc(title)}</h1><span class="muted game-meta">${esc(meta)}</span></header>`;
-}
-
 function statToggleHtml(statType) {
   return `<label>Stats:<select id="stat-type">
       <option value="R"${statType === 'R' ? ' selected' : ''}>Regular season</option>
@@ -277,7 +268,13 @@ function statToggleHtml(statType) {
     </select></label>`;
 }
 
-function gameInfoHtml(gd, live, parkSvg) {
+function gameInfoHtml(gd, live, sched, parkSvg) {
+  const series = sched && sched.gameType !== 'R' && sched.seriesDescription
+    ? `${sched.seriesDescription}${sched.seriesGameNumber ? `, Game ${sched.seriesGameNumber}` : ''}`
+    : '';
+  // officialDate is a plain YYYY-MM-DD; read it as UTC so the day never shifts.
+  const date = new Date(`${gd.datetime.officialDate}T00:00Z`)
+    .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
   const plays = live.plays?.allPlays ?? [];
   const started = plays.some(p => p.playEvents?.some(e => e.isPitch));
   const final = gd.status.abstractGameState === 'Final';
@@ -299,6 +296,8 @@ function gameInfoHtml(gd, live, parkSvg) {
     : '-';
 
   const items = [
+    ['Date', esc(date)],
+    ...(series ? [['Series', esc(series)]] : []),
     ['Stadium', esc(gd.venue.name)],
     ['Location', esc(cityState || '-')],
     ['Attendance', esc(attendance)],
@@ -314,7 +313,7 @@ function gameInfoHtml(gd, live, parkSvg) {
   const park = parkSvg
     ? `<svg class="park" viewBox="0 10 250 225" role="img" aria-label="${esc(gd.venue.name)} field outline">${parkSvg}</svg>`
     : '';
-  return `<h2>Game</h2><div class="game-info">${dl}${park}</div>`;
+  return `<h1>${esc(`${gd.teams.away.name} @ ${gd.teams.home.name}`)}</h1><div class="game-info">${dl}${park}</div>`;
 }
 
 function umpiresHtml(officials) {
@@ -509,9 +508,8 @@ async function showGame(pk, token) {
   const isLive = gd.status.abstractGameState === 'Live';
 
   app.innerHTML = `
-    ${gameHeaderHtml(gd, sched)}
     <div class="summary">
-      <section>${gameInfoHtml(gd, live, stadiums[gd.venue.id])}</section>
+      <section>${gameInfoHtml(gd, live, sched, stadiums[gd.venue.id])}</section>
       <section class="split">
         <div>${umpiresHtml(live.boxscore.officials)}</div>
         <div>${standingsHtml(sides, standings)}</div>
