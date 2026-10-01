@@ -64,7 +64,8 @@ td.num, th.num { text-align: right; }
 .status { font-weight: bold; }
 
 .games table { margin: 0 auto; }
-.games td { padding-right: 20px; white-space: normal; }
+/* Middle, so time and status line up with a matchup that wraps onto two lines. */
+.games td { padding-right: 20px; white-space: normal; vertical-align: middle; }
 .games td:first-child, .games td:last-child, .games .nowrap { white-space: nowrap; }
 /* No trailing padding, so the centered table isn't nudged left. */
 .games :is(th, td):last-child { padding-right: 0; }
@@ -128,7 +129,8 @@ dl.standings dd::before {
   margin: 0 0.3em;
 }
 
-dl.coaches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.2em; margin: 0.2em 0 0; }
+/* Fills down each column: Manager over Bench, 1st over 3rd. */
+dl.coaches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, auto); grid-auto-flow: column; gap: 0 1.2em; margin: 0.2em 0 0; }
 /* A long name wraps within its column instead of widening it. */
 dl.coaches dd { white-space: normal; text-align: right; }
 

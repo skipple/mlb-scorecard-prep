@@ -9,7 +9,8 @@ const UMP_ABBR = {
 const POSTSEASON_TYPES = ['F', 'D', 'L', 'W'];
 // Coaching staff shown, in display order. Matched by job name because each interim role has its own
 // job id (e.g. NTRM for Interim Manager).
-const CORE_COACH_JOBS = ['Manager', 'Bench Coach', 'Hitting Coach', 'Pitching Coach'];
+// Values are the short labels printed on the card.
+const CORE_COACH_JOBS = { 'Manager': 'Manager', 'Bench Coach': 'Bench', 'First Base Coach': '1st', 'Third Base Coach': '3rd' };
 
 const app = document.getElementById('app');
 const statsNoteEl = document.getElementById('stats-note');
@@ -443,11 +444,16 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds, coaches) {
       [...pitcherNum, 7, 8], relievers.length || -1)
     : '<p>Not yet available</p>';
 
-  // Two columns of "Role ..... # Last name"; "Interim Bench Coach" shows as "Int Bench".
-  const role = job => job.replace(/^Interim /, 'Int ').replace(/ Coach$/, '');
+  // Two columns of "Role ..... # Last name"; interim roles show the same label as the regular role.
+  const role = job => CORE_COACH_JOBS[job.replace(/^Interim /, '')];
+  // "A. Cora"; falls back to the full name if the API omits the parts.
+  const coachName = p => {
+    const first = p.useName || p.firstName, last = p.useLastName || p.lastName;
+    return first && last ? `${first[0]}. ${last}` : p.fullName;
+  };
   const staff = coaches.length
     ? `<dl class="standings coaches">${coaches.map(c =>
-      `<div><dt>${esc(role(c.job))}</dt><dd>${esc([c.jerseyNumber, c.person.useLastName ?? c.person.lastName ?? c.person.fullName].filter(Boolean).join(' '))}</dd></div>`).join('')}</dl>`
+      `<div><dt>${esc(role(c.job))}</dt><dd>${esc([c.jerseyNumber, coachName(c.person)].filter(Boolean).join(' '))}</dd></div>`).join('')}</dl>`
     : '<p>Not yet available</p>';
 
   return `<section class="team">
@@ -484,7 +490,7 @@ async function showGame(pk, token) {
 
   // Staff as of the game date, so past games show who was coaching then.
   const coachesFor = team => getJSON(`/api/v1/teams/${team.id}/coaches?date=${gd.datetime.officialDate}&hydrate=person`)
-    .then(d => CORE_COACH_JOBS.flatMap(job => (d.roster ?? []).filter(c => c.job?.replace(/^Interim /, '') === job)))
+    .then(d => Object.keys(CORE_COACH_JOBS).flatMap(job => (d.roster ?? []).filter(c => c.job?.replace(/^Interim /, '') === job)))
     .catch(() => []);
 
   const [peopleData, standings, sched, rankings, startingPitcherSets, coachSets, stadiums] = await Promise.all([
