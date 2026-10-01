@@ -172,6 +172,16 @@ dl.coaches dd { white-space: normal; text-align: right; }
 .error { color: #b00; }
 
 .nav-controls { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+nav a, nav label { white-space: nowrap; }
+
+/* Phones: links on the first row, game status and stats picker on a row of their own. */
+@media screen and (max-width: 560px) {
+  nav { flex-wrap: wrap; gap: 6px 12px; }
+  .nav-controls { display: contents; }
+  #theme-toggle { margin-left: auto; }
+  #nav-extra { order: 1; flex-basis: 100%; }
+  #nav-extra:empty { display: none; }
+}
 select {
   font: inherit;
   color: inherit;
