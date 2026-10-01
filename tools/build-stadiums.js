@@ -135,12 +135,13 @@ function simplify(tree) {
     if (SHAPES.has(n.tag)) {
       if (!kind) return;
       const geo = GEOMETRY.filter(k => k !== 'transform' && a[k] != null).map(k => `${k}="${num(a[k])}"`).join(' ');
-      out.push({ shape: `<${n.tag} ${geo}/>`, kind, transforms: t });
+      out.push({ shape: `<${n.tag} ${geo}/>`, kind, transforms: t, tag: n.tag, attrs: a });
       return;
     }
     n.children.forEach(c => walk(c, kind, t));
   };
   tree.forEach(n => walk(n, null, []));
+  trimFoulLines(out);
   // Wall first, then the rest, so later lines sit on top.
   const order = ['wall', 'grass', 'dirt', 'line', 'base'];
   const wrap = (inner, transforms) => transforms.reduceRight((acc, tr) => `<g transform="${tr}">${acc}</g>`, inner);
@@ -155,6 +156,37 @@ function simplify(tree) {
     return `<text x="${(x + dx / d * LABEL_PUSH).toFixed(1)}" y="${(y + dy / d * LABEL_PUSH).toFixed(1)}">${o.text}</text>`;
   });
   return shapes.join('') + labels.join('') + (north == null ? '' : compassRose(north));
+}
+
+// Most parks outline the dirt with a straight edge down each baseline, a stroke's width outside the
+// foul line, so the two read as one thick line. Start each foul line where that edge ends instead.
+function trimFoulLines(out) {
+  const local = o => o.tag === 'line' ? [[+o.attrs.x1, +o.attrs.y1], [+o.attrs.x2, +o.attrs.y2]]
+    : o.tag === 'path' ? pathPoints(o.attrs.d)[0] : null;
+  const global = o => { try { return local(o)?.map(([x, y]) => place(o.transforms, x, y)); } catch { return null; } };
+  const edges = out.filter(o => o.kind === 'dirt' && o.tag === 'path').flatMap(o => {
+    try { return pathPoints(o.attrs.d).map(pts => pts.map(([x, y]) => place(o.transforms, x, y))); } catch { return []; }
+  }).flatMap(pts => pts.slice(1).map((q, i) => [pts[i], q]));
+  for (const o of out.filter(o => o.kind === 'line')) {
+    const pts = global(o);
+    if (!pts || pts.length < 2) continue;
+    const [[ax, ay], [bx, by]] = pts;
+    const len = Math.hypot(bx - ax, by - ay), ux = (bx - ax) / len, uy = (by - ay) / len;
+    const along = ([x, y]) => (x - ax) * ux + (y - ay) * uy;
+    const off = ([x, y]) => Math.abs((x - ax) * uy - (y - ay) * ux);
+    // A long dirt edge running alongside the line (within ~5 degrees and a few units of it).
+    const t = Math.max(0, ...edges.filter(([p, q]) => {
+      const el = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      return el > 10 && Math.abs((q[0] - p[0]) * uy - (q[1] - p[1]) * ux) / el < 0.09 && off(p) < 4 && off(q) < 4;
+    }).flat().map(along));
+    if (t <= 0 || t >= len) continue;
+    // Transforms are affine, so the same fraction of the first segment works in local coordinates.
+    const [[lx, ly], [mx, my], ...rest] = local(o), f = t / len;
+    const start = [lx + (mx - lx) * f, ly + (my - ly) * f].map(v => v.toFixed(1));
+    o.shape = o.tag === 'line'
+      ? `<line x1="${start[0]}" y1="${start[1]}" x2="${num(mx)}" y2="${num(my)}"/>`
+      : `<path d="M${start.join(',')}L${[[mx, my], ...rest].map(p => p.map(v => +v.toFixed(1)).join(',')).join(' ')}"/>`;
+  }
 }
 
 // Savant's compass is a ring with an "N" set outside it in the direction of true north. Returns

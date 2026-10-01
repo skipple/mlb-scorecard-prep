@@ -303,7 +303,7 @@ function gameInfoHtml(gd, live, sched, parkSvg) {
     ['Weather', esc(weather || 'Not yet available')],
     ['Wind', esc(w.wind || 'Not yet available')],
     ['Start', startTimeHtml(gd)],
-    ['First pitch', started && gd.gameInfo?.firstPitch ? esc(fmtTime(gd.gameInfo.firstPitch, gd.venue.timeZone?.id)) : '-'],
+    ['1<sup>st</sup> Pitch',started && gd.gameInfo?.firstPitch ? esc(fmtTime(gd.gameInfo.firstPitch, gd.venue.timeZone?.id)) : '-'],
     // End time and duration only mean something once the game is over.
     ...(final ? [
       ['End time', endTime ? esc(fmtTime(endTime, gd.venue.timeZone?.id)) : '-'],
