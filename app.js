@@ -91,6 +91,7 @@ function route() {
   const token = ++viewToken;
   const hash = location.hash.slice(1);
   const isGame = /^\d+$/.test(hash);
+  document.body.classList.toggle('list-view', !isGame);
   homeLinkEl.hidden = hash === '';
   printLinkEl.hidden = !isGame;
   const view = isGame
@@ -125,7 +126,7 @@ function dateNavHtml(date) {
 async function showList(date, token) {
   app.textContent = 'Loading games...';
   const iso = localDateISO(date);
-  const data = await getJSON(`/api/v1/schedule?sportId=1&date=${iso}&hydrate=team,venue`);
+  const data = await getJSON(`/api/v1/schedule?sportId=1&date=${iso}&hydrate=team`);
   if (token !== viewToken) return;
 
   const games = data.dates.flatMap(d => d.games);
@@ -135,13 +136,17 @@ async function showList(date, token) {
     return;
   }
 
+  // Times are in the viewer's zone, so it's named once in the header instead of on every row.
+  const tz = new Intl.DateTimeFormat([], { timeZoneName: 'short' })
+    .formatToParts(new Date(games[0].gameDate)).find(p => p.type === 'timeZoneName')?.value;
   const rows = games.map(g => {
-    const time = g.status.startTimeTBD ? 'TBD' : fmtTime(g.gameDate);
-    const matchup = `<a href="#${g.gamePk}">${esc(g.teams.away.team.name)} @ ${esc(g.teams.home.team.name)}</a>`;
-    const series = g.gameType === 'R' ? '' : esc(g.seriesDescription ?? '');
-    return [esc(time), matchup, esc(g.venue?.name), `<span class="status">${esc(g.status.detailedState)}</span>`, series];
+    const time = g.status.startTimeTBD ? 'TBD'
+      : new Date(g.gameDate).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    // Each side stays on one line, so a wrap can only happen right after the '@'.
+    const matchup = `<a href="#${g.gamePk}"><span class="nowrap">${esc(g.teams.away.team.name)} @</span> <span class="nowrap">${esc(g.teams.home.team.name)}</span></a>`;
+    return [esc(time), matchup, `<span class="status">${esc(g.status.detailedState)}</span>`];
   });
-  app.innerHTML = heading + `<div class="games">${table(['Time', 'Matchup', 'Venue', 'Status', ''], rows)}</div>`;
+  app.innerHTML = heading + `<div class="games">${table([tz ? `Time (${tz})` : 'Time', 'Matchup', 'Status'], rows)}</div>`;
 }
 
 // ---------- Single game ----------

@@ -14,6 +14,9 @@ body {
   color: var(--fg);
 }
 
+/* The game list has only three columns, so it doesn't need the full scorecard width. */
+body.list-view { max-width: 640px; }
+
 a { color: inherit; }
 
 nav {
@@ -60,8 +63,11 @@ td.num, th.num { text-align: right; }
 
 .status { font-weight: bold; }
 
+.games table { margin: 0 auto; }
 .games td { padding-right: 20px; white-space: normal; }
-.games td:first-child { white-space: nowrap; }
+.games td:first-child, .games td:last-child, .games .nowrap { white-space: nowrap; }
+/* No trailing padding, so the centered table isn't nudged left. */
+.games :is(th, td):last-child { padding-right: 0; }
 
 dl.info {
   display: grid;
@@ -181,6 +187,8 @@ nav a, nav label { white-space: nowrap; }
   #theme-toggle { margin-left: auto; }
   #nav-extra { order: 1; flex-basis: 100%; }
   #nav-extra:empty { display: none; }
+  /* Extra vertical room separates the matchup links so they're easier to tap. */
+  .games td { padding: 6px 10px 6px 0; }
 }
 select {
   font: inherit;
