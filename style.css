@@ -1,7 +1,7 @@
 * { box-sizing: border-box; }
 
 :root { --bg: #fff; --fg: #000; --muted: #555; }
-:root[data-theme="dark"] { --bg: #000; --fg: #fff; --muted: #aaa; color-scheme: dark; }
+:root[data-theme="dark"] { --bg: #1C1C1C; --fg: #F5E8D8; --muted: #bbbbbb; color-scheme: dark; }
 
 body {
   margin: 0 auto;
