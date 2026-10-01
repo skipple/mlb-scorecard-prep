@@ -66,7 +66,7 @@ function table(headers, rows, numCols = [], groupStart = -1) {
     return `<${tag}${cls ? ` class="${cls}"` : ''}>${v}</${tag}>`;
   };
   const row = (r, n) => `<tr${n === groupStart ? ' class="group-start"' : ''}>${r.map((v, i) => cell('td', v, i)).join('')}</tr>`;
-  return `<table><thead><tr>${headers.map((h, i) => cell('th', esc(h), i)).join('')}</tr></thead>
+  return `<table><thead><tr>${headers.map((h, i) => cell('th', h.html ?? esc(h), i)).join('')}</tr></thead>
     <tbody>${rows.map(row).join('')}</tbody></table>`;
 }
 
@@ -240,7 +240,11 @@ function standingsHtml(sides, standings) {
   const groups = [...new Set(playing.map(id => findTeamGroup(standings, id)))].filter(Boolean);
   if (!groups.length) return '<h2>Standings</h2><p>Not yet available</p>';
   const tableFor = group => {
-    const name = group.division?.nameShort ?? group.teamRecords[0]?.team?.springLeague?.name ?? '';
+    // "AL Central" on wide screens, "ALC" in print and on phones where it would wrap.
+    const spring = group.teamRecords[0]?.team?.springLeague?.name ?? '';
+    const full = group.division?.nameShort ?? spring;
+    const short = group.division?.abbreviation ?? spring.replace(/ League$/, '');
+    const name = { html: `<span class="full">${esc(full)}</span><span class="short">${esc(short)}</span>` };
     const rows = group.teamRecords.map(tr => {
       const b = v => playing.includes(tr.team.id) ? `<b>${esc(v)}</b>` : esc(v);
       return [b(tr.team.abbreviation ?? tr.team.name), b(tr.gamesBack)];

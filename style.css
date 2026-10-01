@@ -100,6 +100,7 @@ dl.info dd.nowrap { white-space: nowrap; }
 
 .division-standings { display: flex; gap: 0 24px; }
 .division-standings.single { justify-content: center; }
+.division-standings .short { display: none; }
 
 tr.group-start td { padding-top: 0.6em; }
 
@@ -164,6 +165,8 @@ dl.coaches dd { white-space: normal; text-align: right; }
   /* 6px between player columns: 4px spacing + 2px padding. */
   .team table { border-spacing: 4px 0; margin: 0 -4px; width: calc(100% + 8px); }
   .team .name-col ~ th, .team .name-col ~ td { padding-left: 2px; }
+  .division-standings .full { display: none; }
+  .division-standings .short { display: inline; }
 }
 
 .error { color: #b00; }
@@ -214,6 +217,8 @@ footer p:empty { display: none; }
   .team table { border-spacing: 7px 0; margin: 0 -7px; width: calc(100% + 14px); }
   .team .name-col ~ th, .team .name-col ~ td { padding-left: 3px; white-space: nowrap; }
   h2, h3 { margin: 0.8em 0 0.2em; }
+  .division-standings .full { display: none; }
+  .division-standings .short { display: inline; }
   .muted { color: #000; }
   @page { margin: 0.5in; }
 }
