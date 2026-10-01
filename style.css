@@ -149,6 +149,15 @@ dl.coaches dd { white-space: normal; text-align: right; }
   border-bottom: 1px dashed var(--fg);
 }
 .team .name { white-space: normal; }
+/* Full name if it fits on one line, else "C. Sánchez". The font is monospace, so the full name is
+   var(--n) ch wide; --room is huge or clamps to 0 depending on whether that fits in the name
+   column (100cqw), which shows one form and collapses the other. Pure CSS, so it also holds for
+   print and narrow screens. The container doesn't count toward the column's width, so min-width
+   keeps the column from collapsing. */
+.team .name.fit { display: flex; container-type: inline-size; min-width: 9ch; }
+.team .fit > span { overflow: hidden; max-width: var(--room); max-height: var(--room); }
+.team .fit .full { --room: calc((100cqw - var(--n) * 1ch + 0.01px) * 100000); white-space: nowrap; }
+.team .fit .short { --room: calc((var(--n) * 1ch - 100cqw) * 100000); }
 
 @media screen and (max-width: 760px) {
   .summary, .teams { grid-template-columns: 1fr; }

@@ -175,6 +175,15 @@ function seasonStat(person, group) {
   return split?.stat;
 }
 
+// "Cristopher Sánchez" -> "C. Sánchez". Strips the first name as MLB uses it, so
+// multi-word first names ("Jung Hoo Lee") and last names ("De La Cruz", "Acuña Jr.") stay intact.
+function shortName(person) {
+  const full = person?.fullName;
+  const first = person?.useName ?? person?.firstName;
+  if (!full || !first || !full.startsWith(`${first} `)) return null;
+  return `${first[0]}. ${full.slice(first.length + 1)}`;
+}
+
 function battingCells(stat) {
   if (!stat) return ['-', '', ''];
   if (stat.atBats < SMALL_SAMPLE_AB) return [`${stat.hits}/${stat.atBats}`, '', ''];
@@ -373,7 +382,14 @@ function teamStandingsHtml(team, standings) {
 
 function teamHtml(s, people, rankings, standings, startingPitcherIds, coaches) {
   const person = id => people.get(id);
-  const name = id => `<span class="name">${esc(person(id)?.fullName ?? `#${id}`)}</span>`;
+  const name = id => {
+    const full = person(id)?.fullName ?? `#${id}`;
+    const short = shortName(person(id));
+    if (!short || short === full) return `<span class="name">${esc(full)}</span>`;
+    // --n is the full name's length in characters; style.css shows the short form when it won't fit.
+    return `<span class="name fit" style="--n:${[...full].length}"><span class="full">${esc(full)}</span>` +
+      `<span class="short" aria-hidden="true">${esc(short)}</span></span>`;
+  };
   const bats = id => esc(person(id)?.batSide?.code ?? '');
   const throws = id => esc(person(id)?.pitchHand?.code ?? '');
   const num = id => esc(s.jersey(id) || person(id)?.primaryNumber || '');
@@ -388,8 +404,14 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds, coaches) {
   const pitcherNum = [0, 3, 4, 5, 6];
   const pitcherRow = id => [num(id), name(id), throws(id), pitStat(id, 'inningsPitched'), ...pitch(id)];
 
+  // Starter line adds K and BB between W-L and ERA.
+  const starterRow = id => {
+    const [wl, ...rates] = pitch(id);
+    return [num(id), name(id), throws(id), pitStat(id, 'inningsPitched'), wl,
+      pitStat(id, 'strikeOuts'), pitStat(id, 'baseOnBalls'), ...rates];
+  };
   const starter = s.starter
-    ? table(pitcherHeaders, [pitcherRow(s.starter)], pitcherNum)
+    ? table(['#', 'Name', 'T', 'IP', 'W-L', 'K', 'BB', 'ERA', 'WHIP'], [starterRow(s.starter)], [0, 3, 4, 5, 6, 7, 8])
     : '<p>TBD</p>';
 
   const lineup = s.starters.length
