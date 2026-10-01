@@ -269,8 +269,9 @@ function statToggleHtml(statType) {
 }
 
 function gameInfoHtml(gd, live, sched, parkSvg) {
+  // Non-breaking space keeps "Game 2" together when the line wraps on narrow screens.
   const series = sched && sched.gameType !== 'R' && sched.seriesDescription
-    ? `${sched.seriesDescription}${sched.seriesGameNumber ? `, Game ${sched.seriesGameNumber}` : ''}`
+    ? `${sched.seriesDescription}${sched.seriesGameNumber ? ` Game ${sched.seriesGameNumber}` : ''}`
     : '';
   // officialDate is a plain YYYY-MM-DD; read it as UTC so the day never shifts.
   const date = new Date(`${gd.datetime.officialDate}T00:00Z`)

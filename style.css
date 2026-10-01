@@ -90,9 +90,11 @@ dl.info dd.nowrap { white-space: nowrap; }
 /* Series and park share the space beside the info list. The negative margin stretches
    the column 20px past the bottom of the list without pushing the next section down. */
 .game-side { flex: 1 1 160px; min-width: 0; display: flex; flex-direction: column; margin-bottom: -20px; }
-.series { text-align: right; margin-bottom: 6px; }
+/* Reserve one line only: if the series wraps, the extra line overlaps the top of the park
+   rather than pushing it down. Positioned so the text paints above the drawing. */
+.series { height: 1lh; text-align: right; margin-bottom: 6px; position: relative; z-index: 1; }
 /* The park fills what's left of the column; the drawing scales to fit and stays centered. */
-.park { flex: 1 1 0; min-height: 0; margin-top: 0.25em; overflow: visible; }
+.park { flex: 1 1 0; min-height: 0; overflow: visible; }
 .park * { vector-effect: non-scaling-stroke; }
 .park .wall, .park .grass, .park .dirt, .park .line { fill: none; stroke: var(--fg); stroke-width: 1; }
 .park .grass { stroke: var(--muted); stroke-dasharray: 2 2; }
