@@ -83,7 +83,7 @@ dl.info dd.nowrap { white-space: nowrap; }
 
 .game-info { display: flex; justify-content: space-between; gap: 12px; }
 /* Auto margins center the park in the space beside the info list. */
-.park { flex: 0 1 160px; min-width: 0; margin: 0 auto; overflow: visible; }
+.park { flex: 0 1 160px; min-width: 0; margin: 0.25em auto 0; overflow: visible; }
 .park * { vector-effect: non-scaling-stroke; }
 .park .wall, .park .grass, .park .dirt, .park .line { fill: none; stroke: var(--fg); stroke-width: 1; }
 .park .grass { stroke: var(--muted); stroke-dasharray: 2 2; }
