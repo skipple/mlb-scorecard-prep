@@ -1,5 +1,8 @@
 const API = 'https://statsapi.mlb.com';
 const REFRESH_MS = 5 * 60 * 1000;
+// League-wide data (standings, team rankings, rosters) is shared by every game, so it's reused
+// for this long when moving between games.
+const CACHE_MS = 5 * 60 * 1000;
 const SMALL_SAMPLE_AB = 20;
 const UMP_ABBR = {
   'Home Plate': 'HP', 'First Base': '1B', 'Second Base': '2B',
@@ -21,11 +24,28 @@ const themeToggleEl = document.getElementById('theme-toggle');
 let refreshTimer = null;
 let viewToken = 0;
 let usePostseasonStats = false;
+// The game shown last and the data it loaded, so a refresh or stat toggle redraws in place.
+let lastGame = null;
+let stadiumsPromise = null;
+
+// Marks a request that settled with an error; undefined means it hasn't settled yet.
+const FAILED = Symbol('failed');
+const PENDING = '<span class="pending">…</span>';
 
 async function getJSON(path) {
   const res = await fetch(API + path);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText} (${path})`);
   return res.json();
+}
+
+const jsonCache = new Map();
+function getCachedJSON(path) {
+  const hit = jsonCache.get(path);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.promise;
+  const promise = getJSON(path);
+  jsonCache.set(path, { at: Date.now(), promise });
+  promise.catch(() => jsonCache.delete(path));
+  return promise;
 }
 
 function esc(value) {
@@ -105,7 +125,7 @@ function route() {
   });
 }
 
-window.addEventListener('hashchange', route);
+window.addEventListener('hashchange', () => route());
 route();
 
 // ---------- Game list ----------
@@ -125,13 +145,13 @@ function dateNavHtml(date) {
 }
 
 async function showList(date, token) {
-  app.textContent = 'Loading games...';
+  const heading = dateNavHtml(date);
+  app.innerHTML = `${heading}<p class="pending">Loading games...</p>`;
   const iso = localDateISO(date);
   const data = await getJSON(`/api/v1/schedule?sportId=1&date=${iso}&hydrate=team`);
   if (token !== viewToken) return;
 
   const games = data.dates.flatMap(d => d.games);
-  const heading = dateNavHtml(date);
   if (!games.length) {
     app.innerHTML = `${heading}<p>No MLB games on this date.</p>`;
     return;
@@ -202,14 +222,13 @@ function pitchingCells(stat) {
 }
 
 // Park outlines by venue id, built from Baseball Savant by tools/build-stadiums.js. Loaded once.
-let stadiumsPromise = null;
 function loadStadiums() {
   stadiumsPromise ??= fetch('stadiums.json').then(r => r.ok ? r.json() : {}).catch(() => ({}));
   return stadiumsPromise;
 }
 
 async function fetchStandings(season, statType) {
-  const standings = await getJSON((statType === 'S'
+  const standings = await getCachedJSON((statType === 'S'
     ? `/api/v1/standings?leagueId=114,115&season=${season}&standingsTypes=springTraining`
     : `/api/v1/standings?leagueId=103,104&season=${season}&standingsTypes=regularSeason`) +
     '&hydrate=team,division');
@@ -242,6 +261,8 @@ function startTimeHtml(gd) {
 // One table per division the two teams play in (one if they share it). Spring training groups
 // by Cactus / Grapefruit League, which the API only names on each team.
 function standingsHtml(sides, standings) {
+  if (standings === undefined) return `<h2>Standings</h2><p>${PENDING}</p>`;
+  if (standings === FAILED) standings = {};
   const playing = sides.map(s => s.team.id);
   const groups = [...new Set(playing.map(id => findTeamGroup(standings, id)))].filter(Boolean);
   if (!groups.length) return '<h2>Standings</h2><p>Not yet available</p>';
@@ -316,7 +337,7 @@ function gameInfoHtml(gd, live, sched, parkSvg) {
   const park = parkSvg
     ? `<svg class="park" viewBox="0 10 250 225" role="img" aria-label="${esc(gd.venue.name)} field outline">${parkSvg}</svg>`
     : '';
-  return `<h1>${esc(`${gd.teams.away.name} @ ${gd.teams.home.name}`)}</h1><div class="game-info">${dl}<div class="game-side">${series ? `<div class="muted series">${esc(series)}</div>` : ''}${park}</div></div>`;
+  return `<h1><span>${esc(gd.teams.away.name)}</span> <span>@ ${esc(gd.teams.home.name)}</span></h1><div class="game-info">${dl}<div class="game-side">${series ? `<div class="muted series">${esc(series)}</div>` : ''}${park}</div></div>`;
 }
 
 function umpiresHtml(officials) {
@@ -346,7 +367,7 @@ async function teamRankings(season, statType) {
   const rankings = {};
   await Promise.all(TEAM_STAT_GROUPS.flatMap(({ stats, rows }) => rows.flatMap(([, query]) =>
     stats.map(([, stat, order]) =>
-      getJSON(`/api/v1/teams/stats?${TEAM_STAT_QUERIES[query]}&sortStat=${stat}&order=${order}` +
+      getCachedJSON(`/api/v1/teams/stats?${TEAM_STAT_QUERIES[query]}&sortStat=${stat}&order=${order}` +
         `&sportIds=1&season=${season}&gameType=${statType}`)
         .then(d => d.stats?.[0]?.splits ?? [], () => [])
         .then(splits => { (rankings[query] ??= {})[stat] = splits; })))));
@@ -355,6 +376,7 @@ async function teamRankings(season, statType) {
 
 function teamStatsHtml(teamId, rankings) {
   const cell = (query, stat) => {
+    if (rankings === undefined) return PENDING;
     const split = rankings[query]?.[stat]?.find(s => s.team?.id === teamId);
     const value = split?.stat?.[stat];
     if (value == null) return '-';
@@ -372,7 +394,8 @@ function teamStatsHtml(teamId, rankings) {
 }
 
 function teamStandingsHtml(team, standings) {
-  const group = findTeamGroup(standings, team.id);
+  const pending = standings === undefined;
+  const group = standings === FAILED ? null : findTeamGroup(standings ?? {}, team.id);
   const tr = group?.teamRecords.find(x => x.team.id === team.id);
   const split = type => {
     const s = tr?.records?.splitRecords?.find(x => x.type === type);
@@ -389,11 +412,14 @@ function teamStandingsHtml(team, standings) {
     ['Score diff', diff > 0 ? `+${diff}` : diff],
   ];
   return `<dl class="standings">${items.map(([label, value]) =>
-    `<div><dt>${esc(label)}</dt><dd>${esc(value ?? '-')}</dd></div>`).join('')}</dl>`;
+    `<div><dt>${esc(label)}</dt><dd>${pending ? PENDING : esc(value ?? '-')}</dd></div>`).join('')}</dl>`;
 }
 
-function teamHtml(s, people, rankings, standings, startingPitcherIds, coaches) {
-  const person = id => people.get(id);
+// people: Map of id -> person with season stats, or undefined while loading / FAILED.
+// Before it arrives, names and handedness come from the game feed (basePeople) and stats show as pending.
+function teamPlayersHtml(s, basePeople, people, startingPitcherIds = new Set()) {
+  const statsPending = people === undefined;
+  const person = id => (people instanceof Map && people.get(id)) || basePeople.get(id);
   const name = id => {
     const full = person(id)?.fullName ?? `#${id}`;
     const short = shortName(person(id));
@@ -405,10 +431,10 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds, coaches) {
   const bats = id => esc(person(id)?.batSide?.code ?? '');
   const throws = id => esc(person(id)?.pitchHand?.code ?? '');
   const num = id => esc(s.jersey(id) || person(id)?.primaryNumber || '');
-  const bat = id => battingCells(seasonStat(person(id), 'hitting')).map(esc);
-  const pitch = id => pitchingCells(seasonStat(person(id), 'pitching')).map(esc);
-  const hitStat = (id, key) => esc(seasonStat(person(id), 'hitting')?.[key] ?? '-');
-  const pitStat = (id, key) => esc(seasonStat(person(id), 'pitching')?.[key] ?? '-');
+  const bat = id => statsPending ? [PENDING, PENDING, PENDING] : battingCells(seasonStat(person(id), 'hitting')).map(esc);
+  const pitch = id => statsPending ? [PENDING, PENDING, PENDING] : pitchingCells(seasonStat(person(id), 'pitching')).map(esc);
+  const hitStat = (id, key) => statsPending ? PENDING : esc(seasonStat(person(id), 'hitting')?.[key] ?? '-');
+  const pitStat = (id, key) => statsPending ? PENDING : esc(seasonStat(person(id), 'pitching')?.[key] ?? '-');
   const sortKey = id => [person(id)?.lastName, person(id)?.firstName].filter(Boolean).join(' ') || person(id)?.fullName || '';
   const byLastName = ids => [...ids].sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
 
@@ -446,6 +472,15 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds, coaches) {
       [...pitcherNum, 7, 8], relievers.length || -1)
     : '<p>Not yet available</p>';
 
+  return `<h3>Starting pitcher</h3>${starter}
+    <h3>Lineup</h3>${lineup}
+    <h3>Bench</h3>${bench}
+    <h3>Bullpen</h3>${bullpen}`;
+}
+
+// coaches: list of roster entries, or undefined while loading.
+function coachesHtml(coaches) {
+  if (coaches === undefined) return `<p>${PENDING}</p>`;
   // Two columns of "Role ..... # Last name"; interim roles show the same label as the regular role.
   const role = job => CORE_COACH_JOBS[job.replace(/^Interim /, '')];
   // "A. Cora"; falls back to the full name if the API omits the parts.
@@ -453,28 +488,19 @@ function teamHtml(s, people, rankings, standings, startingPitcherIds, coaches) {
     const first = p.useName || p.firstName, last = p.useLastName || p.lastName;
     return first && last ? `${first[0]}. ${last}` : p.fullName;
   };
-  const staff = coaches.length
+  return coaches.length
     ? `<dl class="standings coaches">${coaches.map(c =>
       `<div><dt>${esc(role(c.job))}</dt><dd>${esc([c.jerseyNumber, coachName(c.person)].filter(Boolean).join(' '))}</dd></div>`).join('')}</dl>`
     : '<p>Not yet available</p>';
-
-  return `<section class="team">
-    <h2>${s.side === 'away' ? 'Away' : 'Home'}: ${esc(s.team.name)}</h2>
-    <div class="team-summary">
-      ${teamStandingsHtml(s.team, standings)}
-      ${teamStatsHtml(s.team.id, rankings)}
-    </div>
-    <h3>Starting pitcher</h3>${starter}
-    <h3>Lineup</h3>${lineup}
-    <h3>Bench</h3>${bench}
-    <h3>Bullpen</h3>${bullpen}
-    <h3>Coaches</h3>${staff}
-  </section>`;
 }
 
 async function showGame(pk, token) {
-  app.textContent = 'Loading game...';
+  loadStadiums();
+  // A refresh or stat toggle of the game already on screen keeps it up until the new feed arrives.
+  const prev = lastGame?.pk === pk && app.querySelector('[data-region]') ? lastGame : null;
+  if (!prev) app.textContent = 'Loading game...';
   const feed = await getJSON(`/api/v1.1/game/${pk}/feed/live`);
+  if (token !== viewToken) return;
   const gd = feed.gameData;
   const live = feed.liveData;
   const season = gd.game.season;
@@ -486,40 +512,67 @@ async function showGame(pk, token) {
   const peoplePath = `/api/v1/people?personIds=${ids.join(',')}` +
     `&hydrate=stats(group=[hitting,pitching],type=season,season=${season},gameType=${statType})`;
 
-  const startingPitchersFor = team => getJSON(`/api/v1/teams/${team.id}/roster/depthChart?season=${season}`)
+  const startingPitchersFor = team => getCachedJSON(`/api/v1/teams/${team.id}/roster/depthChart?season=${season}`)
     .then(d => new Set(d.roster.filter(r => r.position?.abbreviation === 'SP').map(r => r.person.id)))
     .catch(() => new Set());
 
   // Staff as of the game date, so past games show who was coaching then.
-  const coachesFor = team => getJSON(`/api/v1/teams/${team.id}/coaches?date=${gd.datetime.officialDate}&hydrate=person`)
+  const coachesFor = team => getCachedJSON(`/api/v1/teams/${team.id}/coaches?date=${gd.datetime.officialDate}&hydrate=person`)
     .then(d => Object.keys(CORE_COACH_JOBS).flatMap(job => (d.roster ?? []).filter(c => c.job?.replace(/^Interim /, '') === job)))
     .catch(() => []);
 
-  const [peopleData, standings, sched, rankings, startingPitcherSets, coachSets, stadiums] = await Promise.all([
-    ids.length ? getJSON(peoplePath) : { people: [] },
-    fetchStandings(season, statType),
-    getJSON(`/api/v1/schedule?gamePk=${pk}`).then(d => d.dates?.[0]?.games?.[0]).catch(() => null),
-    teamRankings(season, statType),
-    Promise.all(sides.map(s => startingPitchersFor(s.team))),
-    Promise.all(sides.map(s => coachesFor(s.team))),
-    loadStadiums(),
-  ]);
-  if (token !== viewToken) return;
+  // Each request fills one key; undefined until it settles. Data from the previous draw of this
+  // game stands in until the fresh copy arrives; stats-dependent data only if the stat type matches.
+  const carried = prev ? ['sched', 'stadiums', 'spSets', 'coachSets',
+    ...(prev.statType === statType ? ['people', 'standings', 'rankings'] : [])] : [];
+  const state = Object.fromEntries(carried.map(k => [k, prev.state[k]]));
+  lastGame = { pk, statType, state };
+  const basePeople = new Map(Object.values(gd.players ?? {}).map(p => [p.id, p]));
 
-  const people = new Map(peopleData.people.map(p => [p.id, p]));
+  // [region, state keys it reads, render]
+  const regions = [
+    ['game-info', ['sched', 'stadiums'], st => gameInfoHtml(gd, live,
+      st.sched === FAILED ? null : st.sched, st.stadiums?.[gd.venue.id])],
+    ['umpires', [], () => umpiresHtml(live.boxscore.officials)],
+    ['standings', ['standings'], st => standingsHtml(sides, st.standings)],
+    ...sides.flatMap((s, i) => [
+      [`${s.side}-summary`, ['standings', 'rankings'], st =>
+        teamStandingsHtml(s.team, st.standings) + teamStatsHtml(s.team.id, st.rankings)],
+      [`${s.side}-players`, ['people', 'spSets'], st => teamPlayersHtml(s, basePeople, st.people, st.spSets?.[i])],
+      [`${s.side}-coaches`, ['coachSets'], st => coachesHtml(st.coachSets?.[i])],
+    ]),
+  ];
+  const render = key => {
+    if (token !== viewToken) return;
+    for (const [name, deps, html] of regions) {
+      if (key && !deps.includes(key)) continue;
+      const el = app.querySelector(`[data-region="${name}"]`);
+      if (el) el.innerHTML = html(state);
+    }
+  };
+  const track = (key, promise) => promise
+    .catch(() => FAILED)
+    .then(value => { state[key] = value; render(key); });
+
   const statsNote = { S: 'spring training', P: 'postseason', R: 'regular season' }[statType];
   const isLive = gd.status.abstractGameState === 'Live';
 
   app.innerHTML = `
     <div class="summary">
-      <section>${gameInfoHtml(gd, live, sched, stadiums[gd.venue.id])}</section>
+      <section data-region="game-info"></section>
       <section class="split">
-        <div>${umpiresHtml(live.boxscore.officials)}</div>
-        <div>${standingsHtml(sides, standings)}</div>
+        <div data-region="umpires"></div>
+        <div data-region="standings"></div>
       </section>
     </div>
-    <div class="teams">${sides.map((s, i) => teamHtml(s, people, rankings, standings, startingPitcherSets[i], coachSets[i])).join('')}</div>
+    <div class="teams">${sides.map(s => `<section class="team">
+      <h2>${s.side === 'away' ? 'Away' : 'Home'}: ${esc(s.team.name)}</h2>
+      <div class="team-summary" data-region="${s.side}-summary"></div>
+      <div data-region="${s.side}-players"></div>
+      <h3>Coaches</h3><div data-region="${s.side}-coaches"></div>
+    </section>`).join('')}</div>
     <p class="muted no-print">Updated ${esc(new Date().toLocaleTimeString())}${isLive ? '. Refreshes every 5 minutes while the game is in progress.' : '.'}</p>`;
+  render();
   statsNoteEl.textContent = `Stats: ${season} ${statsNote}. Batters with fewer than ${SMALL_SAMPLE_AB} AB show H/AB in place of AVG.`;
   const status = `<span class="status">${esc(gd.status.detailedState)}</span>`;
   navExtraEl.innerHTML = isPostseason ? `${status} · ${statToggleHtml(statType)}` : status;
@@ -529,6 +582,15 @@ async function showGame(pk, token) {
       route();
     });
   }
+
+  track('people', (ids.length ? getJSON(peoplePath) : Promise.resolve({ people: [] }))
+    .then(d => new Map(d.people.map(p => [p.id, p]))));
+  track('standings', fetchStandings(season, statType));
+  track('sched', getJSON(`/api/v1/schedule?gamePk=${pk}`).then(d => d.dates?.[0]?.games?.[0] ?? null));
+  track('rankings', teamRankings(season, statType));
+  track('spSets', Promise.all(sides.map(s => startingPitchersFor(s.team))));
+  track('coachSets', Promise.all(sides.map(s => coachesFor(s.team))));
+  track('stadiums', loadStadiums());
 
   if (isLive) refreshTimer = setTimeout(route, REFRESH_MS);
 }

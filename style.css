@@ -60,6 +60,10 @@ th { border-bottom: 1px dashed var(--fg); font-weight: bold; }
 td.num, th.num { text-align: right; }
 
 .muted { color: var(--muted); }
+/* Placeholder for data still loading; fades in and out so it doesn't read as a value. */
+.pending { color: var(--muted); animation: pending-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes pending-pulse { from { opacity: 1; } to { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .pending { animation: none; } }
 
 .status { font-weight: bold; }
 
@@ -83,6 +87,8 @@ dl.info dd.nowrap { white-space: nowrap; }
 
 /* The game title heads the info section, underlined like the h2s beside it. */
 .summary h1 { margin-bottom: 0.3em; padding-bottom: 2px; border-bottom: 1px solid var(--fg); }
+/* Each team wraps as a unit, so a long matchup breaks right before the "@". */
+.summary h1 span { display: inline-block; }
 /* Small top margin makes up for the h1's larger font so the underlines line up. */
 .summary > .split h2 { margin-top: 0.32em; }
 
@@ -182,6 +188,9 @@ dl.coaches dd { white-space: normal; text-align: right; }
 @media screen and (max-width: 760px) {
   .summary, .teams { grid-template-columns: 1fr; }
   .summary > .split h2 { margin-top: 1.2em; }
+  /* Teams stack, so keep the team's name pinned while scrolling through its section. It's a direct
+     child of the section, so it lets go when the section ends and the next team's name takes over. */
+  .team > h2 { position: sticky; top: 0; z-index: 2; background: var(--bg); padding-top: 4px; margin-top: calc(1.2em - 4px); }
   /* 6px between player columns: 4px spacing + 2px padding. */
   .team table { border-spacing: 4px 0; margin: 0 -4px; width: calc(100% + 8px); }
   .team .name-col ~ th, .team .name-col ~ td { padding-left: 2px; }
