@@ -114,6 +114,9 @@ function route() {
   const isGame = /^\d+$/.test(hash);
   document.body.classList.toggle('list-view', !isGame);
   homeLinkEl.hidden = hash === '';
+  // On a game page this goes back to the game's date once the feed tells us what it is.
+  homeLinkEl.textContent = isGame ? '← Back' : "Today's games";
+  homeLinkEl.href = '#';
   printLinkEl.hidden = !isGame;
   const view = isGame
     ? showGame(hash, token)
@@ -503,6 +506,8 @@ async function showGame(pk, token) {
   if (token !== viewToken) return;
   const gd = feed.gameData;
   const live = feed.liveData;
+  const gameDate = gd.datetime.officialDate;
+  homeLinkEl.href = `#${gameDate === localDateISO() ? '' : gameDate}`;
   const season = gd.game.season;
   const isPostseason = POSTSEASON_TYPES.includes(gd.game.type);
   const statType = ['S', 'E'].includes(gd.game.type) ? 'S' : (isPostseason && usePostseasonStats ? 'P' : 'R');
