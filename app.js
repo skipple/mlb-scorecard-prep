@@ -477,8 +477,8 @@ function teamPlayersHtml(s, basePeople, people, startingPitcherIds = new Set()) 
 
   return `<h3>Starting pitcher</h3>${starter}
     <h3>Lineup</h3>${lineup}
-    <h3>Bench</h3>${bench}
-    <h3>Bullpen</h3>${bullpen}`;
+    <h3>Bench</h3><div class="pin-head">${bench}</div>
+    <h3>Bullpen</h3><div class="pin-head">${bullpen}</div>`;
 }
 
 // coaches: list of roster entries, or undefined while loading.
