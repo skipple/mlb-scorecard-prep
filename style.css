@@ -194,7 +194,7 @@ dl.coaches dd { white-space: normal; text-align: right; }
   /* Teams stack, so keep the team's name pinned while scrolling through its section. It's a direct
      child of the section, so it lets go when the section ends and the next team's name takes over. */
   .team > h2 { position: sticky; top: 0; z-index: 2; background: var(--bg); padding-top: 4px; margin-top: calc(1.2em - 4px); }
-  /* The long Bench and Bullpen lists also pin their column headers, just under the team name
+  /* The Lineup, Bench and Bullpen lists also pin their column headers, just under the team name
      (its line height + 4px top padding + 2px bottom padding + 1px border, less 1px so no gap
      shows). The header lets go when its table ends. The ::before paints the background across
      the border-spacing gaps between cells, which a cell or row background wouldn't cover. */

@@ -476,7 +476,7 @@ function teamPlayersHtml(s, basePeople, people, startingPitcherIds = new Set()) 
     : '<p>Not yet available</p>';
 
   return `<h3>Starting pitcher</h3>${starter}
-    <h3>Lineup</h3>${lineup}
+    <h3>Lineup</h3><div class="pin-head">${lineup}</div>
     <h3>Bench</h3><div class="pin-head">${bench}</div>
     <h3>Bullpen</h3><div class="pin-head">${bullpen}</div>`;
 }
