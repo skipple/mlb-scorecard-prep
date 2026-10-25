@@ -154,8 +154,11 @@ dl.standings dd::before {
   margin: 0 0.3em;
 }
 
-/* Fills down each column: Manager over Bench, 1st over 3rd. */
+/* Fills down each column: MGR over BC, 1BC over 3BC. Each pair is pinned to its column so a
+   missing coach leaves a gap instead of shifting the others over. */
 dl.coaches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, auto); grid-auto-flow: column; gap: 0 1.2em; margin: 0.2em 0 0; }
+dl.coaches .staff { grid-column: 1; }
+dl.coaches .base { grid-column: 2; }
 /* A long name wraps within its column instead of widening it. */
 dl.coaches dd { white-space: normal; text-align: right; }
 

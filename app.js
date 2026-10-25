@@ -13,7 +13,7 @@ const POSTSEASON_TYPES = ['F', 'D', 'L', 'W'];
 // Coaching staff shown, in display order. Matched by job name because each interim role has its own
 // job id (e.g. NTRM for Interim Manager).
 // Values are the short labels printed on the card.
-const CORE_COACH_JOBS = { 'Manager': 'Manager', 'Bench Coach': 'Bench', 'First Base Coach': '1st', 'Third Base Coach': '3rd' };
+const CORE_COACH_JOBS = { 'Manager': 'MGR', 'Bench Coach': 'BC', 'First Base Coach': '1BC', 'Third Base Coach': '3BC' };
 
 const app = document.getElementById('app');
 const statsNoteEl = document.getElementById('stats-note');
@@ -487,16 +487,16 @@ function teamPlayersHtml(s, basePeople, people, startingPitcherIds = new Set()) 
 // coaches: list of roster entries, or undefined while loading.
 function coachesHtml(coaches) {
   if (coaches === undefined) return `<p>${PENDING}</p>`;
-  // Two columns of "Role ..... # Last name"; interim roles show the same label as the regular role.
+  // Two columns of "Role ..... # Name"; interim roles show the same label as the regular role.
   const role = job => CORE_COACH_JOBS[job.replace(/^Interim /, '')];
-  // "A. Cora"; falls back to the full name if the API omits the parts.
+  // "Alex Cora"; falls back to the full name if the API omits the parts.
   const coachName = p => {
     const first = p.useName || p.firstName, last = p.useLastName || p.lastName;
-    return first && last ? `${first[0]}. ${last}` : p.fullName;
+    return first && last ? `${first} ${last}` : p.fullName;
   };
   return coaches.length
     ? `<dl class="standings coaches">${coaches.map(c =>
-      `<div><dt>${esc(role(c.job))}</dt><dd>${esc([c.jerseyNumber, coachName(c.person)].filter(Boolean).join(' '))}</dd></div>`).join('')}</dl>`
+      `<div class="${/Base Coach$/.test(c.job) ? 'base' : 'staff'}"><dt>${esc(role(c.job))}</dt><dd>${esc([c.jerseyNumber, coachName(c.person)].filter(Boolean).join(' '))}</dd></div>`).join('')}</dl>`
     : '<p>Not yet available</p>';
 }
 
