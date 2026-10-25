@@ -343,10 +343,13 @@ function gameInfoHtml(gd, live, sched, parkSvg) {
   return `<h1><span>${esc(gd.teams.away.name)}</span> <span>@ ${esc(gd.teams.home.name)}</span></h1><div class="game-info">${dl}<div class="game-side">${series ? `<div class="muted series">${esc(series)}</div>` : ''}${park}</div></div>`;
 }
 
-function umpiresHtml(officials) {
+// numbers maps umpire id to uniform number; a fill-in umpire without one shows just the name.
+function umpiresHtml(officials, numbers) {
   if (!officials?.length) return '<h2>Umpires</h2><p>Not yet available</p>';
-  const rows = officials.map(o => [esc(UMP_ABBR[o.officialType] ?? o.officialType), esc(o.official.fullName)]);
-  return `<h2>Umpires</h2>${table(['Pos', 'Name'], rows)}`;
+  const num = numbers instanceof Map ? numbers : new Map();
+  // Same "Pos ..... # Name" box as the team standings.
+  return `<h2>Umpires</h2><dl class="standings">${officials.map(o =>
+    `<div><dt>${esc(UMP_ABBR[o.officialType] ?? o.officialType)}</dt><dd>${esc([num.get(o.official.id), o.official.fullName].filter(Boolean).join(' '))}</dd></div>`).join('')}</dl>`;
 }
 
 // League-wide team stat queries, by name used in TEAM_STAT_GROUPS.
@@ -528,7 +531,7 @@ async function showGame(pk, token) {
 
   // Each request fills one key; undefined until it settles. Data from the previous draw of this
   // game stands in until the fresh copy arrives; stats-dependent data only if the stat type matches.
-  const carried = prev ? ['sched', 'stadiums', 'spSets', 'coachSets',
+  const carried = prev ? ['sched', 'stadiums', 'spSets', 'coachSets', 'umpNumbers',
     ...(prev.statType === statType ? ['people', 'standings', 'rankings'] : [])] : [];
   const state = Object.fromEntries(carried.map(k => [k, prev.state[k]]));
   lastGame = { pk, statType, state };
@@ -538,7 +541,7 @@ async function showGame(pk, token) {
   const regions = [
     ['game-info', ['sched', 'stadiums'], st => gameInfoHtml(gd, live,
       st.sched === FAILED ? null : st.sched, st.stadiums?.[gd.venue.id])],
-    ['umpires', [], () => umpiresHtml(live.boxscore.officials)],
+    ['umpires', ['umpNumbers'], st => umpiresHtml(live.boxscore.officials, st.umpNumbers)],
     ['standings', ['standings'], st => standingsHtml(sides, st.standings)],
     ...sides.flatMap((s, i) => [
       [`${s.side}-summary`, ['standings', 'rankings'], st =>
@@ -596,6 +599,9 @@ async function showGame(pk, token) {
   track('spSets', Promise.all(sides.map(s => startingPitchersFor(s.team))));
   track('coachSets', Promise.all(sides.map(s => coachesFor(s.team))));
   track('stadiums', loadStadiums());
+  // The boxscore names the crew but not their uniform numbers; the league umpire list has them.
+  track('umpNumbers', getCachedJSON('/api/v1/jobs/umpires?sportId=1')
+    .then(d => new Map((d.roster ?? []).map(u => [u.person.id, u.jerseyNumber]))));
 
   if (isLive) refreshTimer = setTimeout(route, REFRESH_MS);
 }

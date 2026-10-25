@@ -119,13 +119,18 @@ dl.info dd.nowrap { white-space: nowrap; }
   gap: 0 18px;
 }
 
+/* Umpires take the spare width so their names get room; standings stay as narrow as their tables. */
 .split {
   display: grid;
-  grid-template-columns: auto auto;
-  gap: 0 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
 }
 
-.division-standings { display: flex; gap: 0 24px; }
+/* As a grid, the box's top margin adds to the heading's instead of collapsing into it,
+   matching the gap above the team standings. */
+[data-region="umpires"] { display: grid; align-content: start; }
+
+.division-standings { display: flex; gap: 0 20px; }
 .division-standings.single { justify-content: center; }
 .division-standings .short { display: none; }
 
