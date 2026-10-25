@@ -33,9 +33,20 @@
     <p id="stats-note"></p>
     <p class="footer-row">
       <span>Data: MLB Stats API.<br>Field outlines: Baseball Savant.<br>Copyright MLB Advanced Media, L.P.</span>
-      <a href="https://github.com/skipple/mlb-scorecard-prep/issues/new">Report an issue</a>
+      <span class="footer-links">
+        <a href="#" data-modal="about">About</a><br>
+        <a href="https://github.com/skipple/mlb-scorecard-prep/issues/new">Report an issue</a>
+      </span>
     </p>
   </footer>
+  <!-- Shared modal shell. A link with data-modal="<name>" loads modals/<name>.html into it. -->
+  <dialog id="modal" class="modal no-print" aria-labelledby="modal-title">
+    <div class="modal-header">
+      <h2 id="modal-title"></h2>
+      <button type="button" class="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body"></div>
+  </dialog>
   <script src="app.js"></script>
 </body>
 </html>

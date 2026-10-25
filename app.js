@@ -95,6 +95,42 @@ function syncThemeToggle() {
   themeToggleEl.textContent = document.documentElement.dataset.theme === 'dark' ? 'Light mode' : 'Dark mode';
 }
 
+// A link with data-modal="<name>" opens the shared <dialog id="modal"> with the content of
+// modals/<name>.html; that file's first <h2> becomes the title. The modal closes on the X, on Escape
+// (built into <dialog>), or on a click on the backdrop outside the box.
+const modalEl = document.getElementById('modal');
+
+async function openModal(name) {
+  const title = modalEl.querySelector('#modal-title');
+  const body = modalEl.querySelector('.modal-body');
+  title.textContent = '';
+  body.innerHTML = PENDING;
+  modalEl.showModal();
+  try {
+    const res = await fetch(`modals/${name}.html`);
+    if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+    const content = document.createElement('div');
+    content.innerHTML = await res.text();
+    const heading = content.querySelector('h2');
+    title.textContent = heading?.textContent ?? '';
+    heading?.remove();
+    body.replaceChildren(...content.childNodes);
+  } catch (err) {
+    body.innerHTML = `<p class="error">Couldn't load this page (${esc(err.message)}).</p>`;
+  }
+}
+
+document.addEventListener('click', e => {
+  const opener = e.target.closest('[data-modal]');
+  if (opener) {
+    e.preventDefault();
+    openModal(opener.dataset.modal);
+    return;
+  }
+  const modal = e.target.closest('dialog.modal');
+  if (modal && (e.target === modal || e.target.closest('.modal-close'))) modal.close();
+});
+
 themeToggleEl.addEventListener('click', e => {
   e.preventDefault();
   const root = document.documentElement;

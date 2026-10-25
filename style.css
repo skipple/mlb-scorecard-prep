@@ -257,6 +257,23 @@ footer { margin-top: 24px; font-size: 0.8em; color: var(--muted); }
 footer p { margin: 0 0 4px; }
 footer p:empty { display: none; }
 .footer-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0 16px; }
+.footer-links { font-size: 1.2em; text-align: right; line-height: 1.6; }
+
+/* Shared look for every <dialog class="modal">. The dialog itself is the backdrop click target,
+   so its padding lives on the header and body instead. */
+.modal {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--fg);
+  background: var(--bg);
+  color: var(--fg);
+}
+.modal::backdrop { background: rgb(0 0 0 / 0.5); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--fg); }
+.modal-header h2 { margin: 10px 0 6px; border-bottom: none; }
+.modal-close { border: none; background: none; color: inherit; font-size: 2em; line-height: 1; padding: 0 0 2px;}
+.modal-body { padding: 4px 16px 12px; font-size: 1.1em}
 
 @media print {
   :root, :root[data-theme="dark"] { --bg: #fff; --fg: #000; --muted: #555; color-scheme: light; }
